@@ -57,17 +57,17 @@ int main(int argc, char* argv[]) {
     Mode mode = Mode::INTERPRET;
     std::string filename;
 
-    if (arg1 == "--vm") {
+    if (arg1 == "-r") {
         mode = Mode::RUN_FROM_FILE;
         if (argc != 3) {
-            std::cerr << "Usage: penguin --vm <file.pgc>\n";
+            std::cerr << "Usage: penguin -r <file.pgc>\n";
             return 1;
         }
         filename = argv[2];
-    } else if (arg1 == "--compile") {
+    } else if (arg1 == "-c") {
         mode = Mode::COMPILE_TO_FILE;
         if (argc != 3) {
-            std::cerr << "Usage: penguin --compile <file.pg>\n";
+            std::cerr << "Usage: penguin -c <file.pg>\n";
             return 1;
         }
         filename = argv[2];

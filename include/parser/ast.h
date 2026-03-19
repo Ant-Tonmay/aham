@@ -13,7 +13,8 @@ struct ASTNode {
 enum class AccessModifier {
     PUBLIC,
     PRIVATE,
-    PROTECTED
+    PROTECTED,
+    SHARED
 };
 
 
@@ -208,9 +209,10 @@ struct ClassMember : ASTNode {
 
 struct FieldDecl : ClassMember {
     std::string name;
+    std::unique_ptr<Expr> initializer;
 
-    explicit FieldDecl(std::string name)
-        : name(std::move(name)) {}
+    explicit FieldDecl(std::string name, std::unique_ptr<Expr> initializer = nullptr)
+        : name(std::move(name)), initializer(std::move(initializer)) {}
 };
 
 struct MethodDecl : ClassMember {

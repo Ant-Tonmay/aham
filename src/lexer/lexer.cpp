@@ -117,7 +117,7 @@ void Lexer::identifier() {
         {"public",TokenType::KEYWORD},
         {"protected",TokenType::KEYWORD},
         {"inherits",TokenType::KEYWORD},
-
+        {"shared",TokenType::KEYWORD},
         
     };
 

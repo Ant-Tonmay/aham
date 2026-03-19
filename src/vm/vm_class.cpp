@@ -53,8 +53,19 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
             uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
             Value objectValue = pop();
+            
+            if (std::holds_alternative<ClassObject*>(objectValue)) {
+                ClassObject* klass = std::get<ClassObject*>(objectValue);
+                if (klass->sharedFields.count(name)) {
+                    push(klass->sharedFields[name]);
+                    return true;
+                }
+                std::cerr << "Runtime error: Undefined shared property '" << name << "'." << std::endl;
+                return false;
+            }
+
             if (!std::holds_alternative<InstanceObject*>(objectValue)) {
-                std::cerr << "Runtime error: OP_GET_PROPERTY expects an instance. Got: "
+                std::cerr << "Runtime error: OP_GET_PROPERTY expects an instance or class. Got: "
                           << valueToString(objectValue) << std::endl;
                 return false;
             }
@@ -101,8 +112,20 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
             Value value = pop();
             Value objectValue = pop();
+
+            if (std::holds_alternative<ClassObject*>(objectValue)) {
+                ClassObject* klass = std::get<ClassObject*>(objectValue);
+                if (klass->sharedFields.count(name)) {
+                    klass->sharedFields[name] = value;
+                    push(value);
+                    return true;
+                }
+                std::cerr << "Runtime error: Undefined shared property '" << name << "'." << std::endl;
+                return false;
+            }
+
             if (!std::holds_alternative<InstanceObject*>(objectValue)) {
-                std::cerr << "Runtime error: OP_SET_PROPERTY expects an instance." << std::endl;
+                std::cerr << "Runtime error: OP_SET_PROPERTY expects an instance or class." << std::endl;
                 return false;
             }
 
@@ -220,7 +243,12 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
 
             Value klassValue = stack.back();
             ClassObject* klass = std::get<ClassObject*>(klassValue);
-            klass->fields[name] = static_cast<AccessModifier>(modifier);
+            
+            if (modifier == static_cast<uint8_t>(AccessModifier::SHARED)) {
+                klass->sharedFields[name] = std::monostate{};
+            } else {
+                klass->fields[name] = static_cast<AccessModifier>(modifier);
+            }
             return true;
         }
 

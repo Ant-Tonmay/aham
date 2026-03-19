@@ -24,6 +24,7 @@ class_stmt
 
 section
     → access_modifier "{" class_member* "}"
+    | "shared" IDENTIFIER "=" expression ";"
 
 access_modifier
     → "private"

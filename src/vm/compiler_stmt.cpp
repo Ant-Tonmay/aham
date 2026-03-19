@@ -182,19 +182,57 @@ void Compiler::compileStmt(ASTNode* node) {
             } else if (auto* idx = dynamic_cast<IndexExpr*>(assign.target.get())) {
                 compileExpr(idx->array.get());
                 compileExpr(idx->index.get());
-                compileExpr(assign.value.get());
+                
+                if (assign.op != TokenType::EQUAL) {
+                    compileExpr(idx->array.get());
+                    compileExpr(idx->index.get());
+                    emit(OP_INDEX_GET);
+                    compileExpr(assign.value.get());
+                    switch (assign.op) {
+                        case TokenType::PLUS_EQUAL: emit(OP_PLUS_EQUAL); break;
+                        case TokenType::MINUS_EQUAL: emit(OP_MINUS_EQUAL); break;
+                        case TokenType::STAR_EQUAL: emit(OP_MULTIPLY_EQUAL); break;
+                        case TokenType::SLASH_EQUAL: emit(OP_DIVIDE_EQUAL); break;
+                        case TokenType::MOD_OP_EQUAL: emit(OP_MODULO_EQUAL); break;
+                        case TokenType::BITWISE_AND_EQUAL: emit(OP_BITWISE_AND_EQUAL); break;
+                        case TokenType::BITWISE_OR_EQUAL: emit(OP_BITWISE_OR_EQUAL); break;
+                        case TokenType::XOR_EQUAL: emit(OP_XOR_EQUAL); break;
+                        default: break;
+                    }
+                } else {
+                    compileExpr(assign.value.get());
+                }
+                
                 emit(OP_INDEX_SET);
+                emit(OP_POP);
             } else if (auto* mem = dynamic_cast<MemberExpr*>(assign.target.get())) {
                 compileExpr(mem->object.get());
-                compileExpr(assign.value.get());
                 int nameIdx = currentChunk().addConstant(mem->name);
 
                 if (assign.op != TokenType::EQUAL) {
-                    // No-op.
+                    compileExpr(mem->object.get());
+                    emit(OP_GET_PROPERTY);
+                    emit(nameIdx);
+                    
+                    compileExpr(assign.value.get());
+                    switch (assign.op) {
+                        case TokenType::PLUS_EQUAL: emit(OP_PLUS_EQUAL); break;
+                        case TokenType::MINUS_EQUAL: emit(OP_MINUS_EQUAL); break;
+                        case TokenType::STAR_EQUAL: emit(OP_MULTIPLY_EQUAL); break;
+                        case TokenType::SLASH_EQUAL: emit(OP_DIVIDE_EQUAL); break;
+                        case TokenType::MOD_OP_EQUAL: emit(OP_MODULO_EQUAL); break;
+                        case TokenType::BITWISE_AND_EQUAL: emit(OP_BITWISE_AND_EQUAL); break;
+                        case TokenType::BITWISE_OR_EQUAL: emit(OP_BITWISE_OR_EQUAL); break;
+                        case TokenType::XOR_EQUAL: emit(OP_XOR_EQUAL); break;
+                        default: break;
+                    }
+                } else {
+                    compileExpr(assign.value.get());
                 }
 
                 emit(OP_SET_PROPERTY);
                 emit(nameIdx);
+                emit(OP_POP);
             }
         }
     } else if (auto* block = dynamic_cast<Block*>(node)) {
@@ -264,6 +302,24 @@ void Compiler::compileStmt(ASTNode* node) {
                     emit(OP_FIELD);
                     emit(fieldNameIdx);
                     emit(static_cast<uint8_t>(section->modifier));
+
+                    if (field->initializer) {
+                        if (section->modifier == AccessModifier::SHARED) {
+                            if (isLocal) {
+                                emit(OP_GET_LOCAL);
+                                emit(arg);
+                            } else {
+                                emit(OP_GET_GLOBAL);
+                                emit(arg);
+                            }
+                            compileExpr(field->initializer.get());
+                            emit(OP_SET_PROPERTY);
+                            emit(fieldNameIdx);
+                            emit(OP_POP);
+                        } else {
+                            throw std::runtime_error("Instance field initializers are not yet supported. Please initialize them in the constructor.");
+                        }
+                    }
                 } else if (auto* method = dynamic_cast<MethodDef*>(member.get())) {
                     Function func(method->name, method->params, std::make_unique<Block>());
 
