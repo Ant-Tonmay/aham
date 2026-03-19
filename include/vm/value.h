@@ -66,6 +66,7 @@ struct ClassObject {
     std::unordered_map<std::string, std::vector<FunctionObject*>> methods;
     std::unordered_map<std::string, AccessModifier> methodAccess;
     std::unordered_map<std::string, AccessModifier> fields;
+    std::unordered_map<std::string, Value> sharedFields;
     
     ClassObject(const std::string& name) : name(name) {}
 };

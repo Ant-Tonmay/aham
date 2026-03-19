@@ -469,14 +469,12 @@ std::unique_ptr<ClassStmt> Parser::parseClassStmt() {
     std::vector<std::unique_ptr<ClassSection>> sections;
 
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
-        if (check(TokenType::KEYWORD) && (peek().lexeme == "public" || peek().lexeme == "private" || peek().lexeme == "protected")) {
+        if (check(TokenType::KEYWORD) && (peek().lexeme == "public" || peek().lexeme == "private" || peek().lexeme == "protected" || peek().lexeme == "shared")) {
             sections.push_back(parseSection());
         } else {
             auto member = parseClassMember();
             std::vector<std::unique_ptr<ClassMember>> members;
             members.push_back(std::move(member));
-            // Default to private for direct members? Or public? Example doesn't specify, assuming private for safety.
-            // Update: Examples imply PUBLIC default (like Python/JS).
             sections.push_back(std::make_unique<ClassSection>(AccessModifier::PUBLIC, std::move(members)));
         }
     }
@@ -508,9 +506,10 @@ AccessModifier Parser::parseAccessModifier() {
         if (word == "public") return AccessModifier::PUBLIC;
         if (word == "private") return AccessModifier::PRIVATE;
         if (word == "protected") return AccessModifier::PROTECTED;
+        if (word == "shared") return AccessModifier::SHARED;
     }
 
-    throw std::runtime_error("Expected access modifier (public/private/protected)");
+    throw std::runtime_error("Expected access modifier (public/private/protected/shared)");
 }
 std::unique_ptr<ClassMember> Parser::parseClassMember() {
 
@@ -528,8 +527,13 @@ std::unique_ptr<ClassMember> Parser::parseClassMember() {
                 return parseMethodDeclAfterName(name.lexeme);
             }
 
+            std::unique_ptr<Expr> initializer = nullptr;
+            if (match(TokenType::EQUAL)) {
+                initializer = parseExpression();
+            }
+
             consume(TokenType::SEMICOLON, "Expect ';' after field.");
-            return std::make_unique<FieldDecl>(name.lexeme);
+            return std::make_unique<FieldDecl>(name.lexeme, std::move(initializer));
         }
         
         if (lexeme == "func") {
