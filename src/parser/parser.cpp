@@ -9,6 +9,17 @@ std::unique_ptr<Program> Parser::parse() {
     auto program = std::make_unique<Program>();
     
     consume(TokenType::LBRACE, "Expect '{' at start of program.");
+    while(!check(TokenType::RBRACE) && !isAtEnd()){
+        if(check(TokenType::KEYWORD) && peek().lexeme == "include"){
+            program->includes.push_back(parseIncludeStmt());
+        }
+        else if(check(TokenType::KEYWORD) && peek().lexeme == "alias"){
+            program->aliases.push_back(parseAliasStmt());
+        }
+        else{
+            break;
+        }
+    }
     
     while (!check(TokenType::RBRACE) && !isAtEnd()) {
         if (check(TokenType::KEYWORD) && peek().lexeme == "class") {
@@ -63,7 +74,6 @@ std::unique_ptr<ContinueStmt> Parser::parseContinueStmt(){
 }
 
 std::unique_ptr<Stmt> Parser::parseStatement() {
-
     if (check(TokenType::KEYWORD) && peek().lexeme == "break") {
         advance();
         return parseBreakStmt();
@@ -787,3 +797,52 @@ std::unique_ptr<Function> Parser::parseFunction() {
     return std::make_unique<Function>(name, std::move(params), std::move(body));
 }
 
+std::unique_ptr<IncludeStmt> Parser::parseIncludeStmt() {
+    consume(TokenType::KEYWORD, "Expect 'include' keyword.");
+    
+    std::string name;
+    std::vector<std::string> members;
+    
+    if (match(TokenType::LESS)) {
+        if (!check(TokenType::GREATER)) {
+            do {
+                Token memberToken = consume(TokenType::IDENTIFIER, "Expect member name");
+                members.push_back(memberToken.lexeme);
+            } while (match(TokenType::COMMA));
+        }
+        consume(TokenType::GREATER, "Expect '>' after members");
+        
+        if (check(TokenType::KEYWORD) && peek().lexeme == "from") {
+            advance();
+        } else {
+            throw std::runtime_error("Expect 'from' after member list.");
+        }
+        
+        Token moduleToken = consume(TokenType::IDENTIFIER, "Expect module name");
+        name = moduleToken.lexeme;
+    } else {
+        Token moduleToken = consume(TokenType::IDENTIFIER, "Expect module name");
+        name = moduleToken.lexeme;
+    }
+    
+    consume(TokenType::SEMICOLON, "Expect ';' after include statement");
+    return std::make_unique<IncludeStmt>(name, std::move(members), "");
+}
+
+std::unique_ptr<AliasStmt> Parser::parseAliasStmt(){
+    advance();
+    Token name = consume(TokenType::IDENTIFIER , "Expect alias name");
+    consume(TokenType::EQUAL, "Expect '=' after Identifier");
+    
+    if (check(TokenType::KEYWORD) && peek().lexeme == "include") {
+        auto includeStmt = parseIncludeStmt();
+        includeStmt->alias = name.lexeme;
+        return std::make_unique<AliasStmt>(name.lexeme, std::move(includeStmt));
+    }else{
+        Token vname = consume(TokenType::IDENTIFIER , "Expect alias name");
+        consume(TokenType::SEMICOLON, "Expect ';' after alias statement");
+         return std::make_unique<AliasStmt>(name.lexeme, vname.lexeme);
+    }
+    
+    throw std::runtime_error("Expect 'include' after '=' in alias statement.");
+}
