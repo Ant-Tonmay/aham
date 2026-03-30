@@ -914,6 +914,109 @@ void test_shift_with_parentheses(){
     ASSERT_EQ(rightRight->name, "c");
 }
 
+void test_include_stmt() {
+    std::cout << "Testing IncludeStmt..." << std::endl;
+    // include math;
+    std::vector<Token> tokens1 = {
+        Token(TokenType::LBRACE, "{"),
+        Token(TokenType::KEYWORD, "func"),
+        Token(TokenType::IDENTIFIER, "main"),
+        Token(TokenType::LPAREN, "("),
+        Token(TokenType::RPAREN, ")"),
+        Token(TokenType::LBRACE, "{"),
+        
+        Token(TokenType::KEYWORD, "include"),
+        Token(TokenType::IDENTIFIER, "math"),
+        Token(TokenType::SEMICOLON, ";"),
+        
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::EOF_TOKEN, "")
+    };
+
+    Parser parser1(tokens1);
+    auto program1 = parser1.parse();
+    ASSERT_NOT_NULL(program1);
+    auto& func1 = program1->functions[0];
+    auto* incStmt = dynamic_cast<IncludeStmt*>(func1->body->statements[0].get());
+    
+    ASSERT_NOT_NULL(incStmt);
+    ASSERT_EQ(incStmt->name, "math");
+    ASSERT_EQ(incStmt->members.size(), 0);
+
+    // include <sin, cos> from math;
+    std::vector<Token> tokens2 = {
+        Token(TokenType::LBRACE, "{"),
+        Token(TokenType::KEYWORD, "func"),
+        Token(TokenType::IDENTIFIER, "main"),
+        Token(TokenType::LPAREN, "("),
+        Token(TokenType::RPAREN, ")"),
+        Token(TokenType::LBRACE, "{"),
+        
+        Token(TokenType::KEYWORD, "include"),
+        Token(TokenType::LESS, "<"),
+        Token(TokenType::IDENTIFIER, "sin"),
+        Token(TokenType::COMMA, ","),
+        Token(TokenType::IDENTIFIER, "cos"),
+        Token(TokenType::GREATER, ">"),
+        Token(TokenType::KEYWORD, "from"),
+        Token(TokenType::IDENTIFIER, "math"),
+        Token(TokenType::SEMICOLON, ";"),
+        
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::EOF_TOKEN, "")
+    };
+
+    Parser parser2(tokens2);
+    auto program2 = parser2.parse();
+    ASSERT_NOT_NULL(program2);
+    auto& func2 = program2->functions[0];
+    auto* incStmt2 = dynamic_cast<IncludeStmt*>(func2->body->statements[0].get());
+    
+    ASSERT_NOT_NULL(incStmt2);
+    ASSERT_EQ(incStmt2->name, "math");
+    ASSERT_EQ(incStmt2->members.size(), 2);
+    ASSERT_EQ(incStmt2->members[0], "sin");
+    ASSERT_EQ(incStmt2->members[1], "cos");
+}
+
+void test_alias_stmt() {
+    std::cout << "Testing AliasStmt..." << std::endl;
+    // alias m = include math;
+    std::vector<Token> tokens = {
+        Token(TokenType::LBRACE, "{"),
+        Token(TokenType::KEYWORD, "func"),
+        Token(TokenType::IDENTIFIER, "main"),
+        Token(TokenType::LPAREN, "("),
+        Token(TokenType::RPAREN, ")"),
+        Token(TokenType::LBRACE, "{"),
+        
+        Token(TokenType::KEYWORD, "alias"),
+        Token(TokenType::IDENTIFIER, "m"),
+        Token(TokenType::EQUAL, "="),
+        Token(TokenType::KEYWORD, "include"),
+        Token(TokenType::IDENTIFIER, "math"),
+        Token(TokenType::SEMICOLON, ";"),
+        
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::RBRACE, "}"),
+        Token(TokenType::EOF_TOKEN, "")
+    };
+
+    Parser parser(tokens);
+    auto program = parser.parse();
+    ASSERT_NOT_NULL(program);
+    auto& func = program->functions[0];
+    auto* aliasStmt = dynamic_cast<AliasStmt*>(func->body->statements[0].get());
+    
+    ASSERT_NOT_NULL(aliasStmt);
+    ASSERT_EQ(aliasStmt->name, "m");
+    ASSERT_NOT_NULL(aliasStmt->include);
+    ASSERT_EQ(aliasStmt->include->name, "math");
+    ASSERT_EQ(aliasStmt->include->alias, "m");
+}
+
 void test_array_defination(){
     
 }
@@ -936,6 +1039,8 @@ int main() {
     test_left_shift();
     test_right_shift();
     test_shift_with_parentheses();
+    test_include_stmt();
+    test_alias_stmt();
     std::cout << "All parser tests passed!" << std::endl;
     return 0;
 }

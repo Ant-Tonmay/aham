@@ -120,6 +120,9 @@ void Lexer::identifier() {
         {"shared",TokenType::KEYWORD},
         {"trait",TokenType::KEYWORD},
         {"impl",TokenType::KEYWORD},
+        {"include",TokenType::KEYWORD},
+        {"from",TokenType::KEYWORD},
+        {"alias",TokenType::KEYWORD},
         
     };
 

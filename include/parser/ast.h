@@ -314,7 +314,41 @@ struct TraitStmt : Stmt {
 
 };
 
+struct IncludeStmt : Stmt {
+    std::string name;
+    std::vector<std::string> members;
+    std::string alias;
+
+    IncludeStmt(std::string name,
+                std::vector<std::string> members,
+                std::string alias = "")
+        : name(std::move(name)),
+          members(std::move(members)),
+          alias(std::move(alias)) {}
+};
+
+struct AliasStmt : Stmt {
+    std::string name;
+    std::unique_ptr<IncludeStmt> include;
+    std::string vname;
+
+    // Constructor for include alias
+    AliasStmt(std::string name,
+              std::unique_ptr<IncludeStmt> include)
+        : name(std::move(name)),
+          include(std::move(include)),
+          vname("") {}
+
+    // Constructor for variable alias
+    AliasStmt(std::string name, std::string vname)
+        : name(std::move(name)),
+          include(nullptr),
+          vname(std::move(vname)) {}
+};
+
 struct Program : ASTNode {
+    std::vector<std::unique_ptr<IncludeStmt>> includes;
+    std::vector<std::unique_ptr<AliasStmt>> aliases;
     std::vector<std::unique_ptr<Function>> functions;
     std::vector<std::unique_ptr<ClassStmt>> classes;
     std::vector<std::unique_ptr<TraitStmt>> traits;

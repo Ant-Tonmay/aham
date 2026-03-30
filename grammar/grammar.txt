@@ -1,4 +1,4 @@
-program    → "{" function* "}"
+program    → "{" top_level_stmt* "}"
 function   → "func" IDENTIFIER "(" params? ")" block
 params     → param ("," param)*
 param      → ("ref" ":")? IDENTIFIER
@@ -6,11 +6,18 @@ param      → ("ref" ":")? IDENTIFIER
 block          → "{" statement_list "}"
 statement_list → statement statement_list | ε
 
-statement   →
-      return_stmt ";"
-    | break_stmt ";"
-    | class_stmt
+top_level_stmt →
+      include_stmt 
+    | alias_stmt
     | trait_stmt
+    | class_stmt 
+    | function
+     
+
+statement   →
+      alias_stmt
+    | return_stmt ";"
+    | break_stmt ";"
     | continue_stmt ";"
     | assignment_stmt ";"
     | print_stmt ";"
@@ -19,6 +26,16 @@ statement   →
     | for_stmt
     | while_stmt
     | block
+
+alias_stmt
+    →
+    "alias" IDENTIFIER "=" include_stmt
+    | "alias" IDENTIFIER "=" IDENTIFIER ";"
+
+include_stmt 
+    →
+    "include"  IDENTIFIER ";"
+    | "include" "<" IDENTIFIER ("," IDENTIFIER)* ">" "from" IDENTIFIER ";"
 
 trait_stmt
     → "trait" IDENTIFIER "inherits" IDENTIFIER ("," IDENTIFIER)* "{"train_section*"}"
