@@ -26,10 +26,22 @@ std::unique_ptr<Program> Parser::parse() {
             program->classes.push_back(parseClassStmt());
         } else if (check(TokenType::KEYWORD) && peek().lexeme == "trait") {
             program->traits.push_back(parseTraitStmt());
-        } else {
+        } else if (check(TokenType::KEYWORD) && peek().lexeme == "func") {
             program->functions.push_back(parseFunction());
+        } else {
+            break;
         }
     }
+
+    while (!check(TokenType::RBRACE) && !isAtEnd()) {
+        if (check(TokenType::KEYWORD) && peek().lexeme == "export") {
+            program->exports.push_back(parseExportStmt());
+        } else {
+            throw std::runtime_error("Unexpected token at end of program. Found: " + peek().lexeme);
+        }
+    }
+
+
     
     consume(TokenType::RBRACE, "Expect '}' at end of program.");
     return program;
@@ -771,8 +783,7 @@ std::vector<Param> Parser::parseParams(){
             advance(); 
             consume(TokenType::COLON, "Expected ':' after 'ref'");
             isRef = true;
-        }
-
+        }        
         consume(TokenType::IDENTIFIER, "Expected parameter name");
         std::string name = previous().lexeme;
 
@@ -845,4 +856,23 @@ std::unique_ptr<AliasStmt> Parser::parseAliasStmt(){
     }
     
     throw std::runtime_error("Expect 'include' after '=' in alias statement.");
+} 
+
+std::unique_ptr<ExportStmt> Parser::parseExportStmt(){
+    consume(TokenType::KEYWORD, "Expected 'export' keyword.");
+    consume(TokenType::LBRACE ,"Expected '{' keyword.");
+    std::vector<std::string> export_mods;
+    
+    while (!check(TokenType::RBRACE) && !isAtEnd()) {
+        Token token = consume(TokenType::IDENTIFIER, "Expected an Indentifier name");
+        export_mods.push_back(token.lexeme);
+        
+        if (!match(TokenType::COMMA)) {
+            break;
+        }
+    }
+    
+    consume(TokenType::RBRACE ,"Expected '}' .");
+    consume(TokenType::SEMICOLON, "Expected ';' after } while exporting");
+    return std::make_unique<ExportStmt>(std::move(export_mods));
 }
