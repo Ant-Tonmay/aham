@@ -123,6 +123,7 @@ void Lexer::identifier() {
         {"include",TokenType::KEYWORD},
         {"from",TokenType::KEYWORD},
         {"alias",TokenType::KEYWORD},
+        {"export",TokenType::KEYWORD},
         
     };
 

@@ -72,6 +72,8 @@ private:
     std::unique_ptr<Expr> parsePostfix();
     std::vector<Param> parseParams();
 
+    std::unique_ptr<ExportStmt> parseExportStmt();
+
     std::unique_ptr<IncludeStmt> parseIncludeStmt();
     std::unique_ptr<AliasStmt> parseAliasStmt();
 

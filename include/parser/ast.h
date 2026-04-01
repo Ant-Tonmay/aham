@@ -346,10 +346,19 @@ struct AliasStmt : Stmt {
           vname(std::move(vname)) {}
 };
 
+struct ExportStmt : ASTNode {
+    std::vector<std::string> members;
+
+    ExportStmt(std::vector<std::string> members)
+        : members(std::move(members)) {}
+};
+
+
 struct Program : ASTNode {
     std::vector<std::unique_ptr<IncludeStmt>> includes;
     std::vector<std::unique_ptr<AliasStmt>> aliases;
     std::vector<std::unique_ptr<Function>> functions;
     std::vector<std::unique_ptr<ClassStmt>> classes;
     std::vector<std::unique_ptr<TraitStmt>> traits;
+    std::vector<std::unique_ptr<ExportStmt>> exports;
 };

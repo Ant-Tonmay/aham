@@ -1,4 +1,4 @@
-program    → "{" top_level_stmt* "}"
+program    → "{" top_level_stmt* export_stmt* "}"
 function   → "func" IDENTIFIER "(" params? ")" block
 params     → param ("," param)*
 param      → ("ref" ":")? IDENTIFIER
@@ -12,7 +12,8 @@ top_level_stmt →
     | trait_stmt
     | class_stmt 
     | function
-     
+
+export_stmt → "export" "{" IDENTIFIER ("," IDENTIFIER)* "}" ";"
 
 statement   →
       alias_stmt
@@ -38,9 +39,9 @@ include_stmt
     | "include" "<" IDENTIFIER ("," IDENTIFIER)* ">" "from" IDENTIFIER ";"
 
 trait_stmt
-    → "trait" IDENTIFIER "inherits" IDENTIFIER ("," IDENTIFIER)* "{"train_section*"}"
+    → "trait" IDENTIFIER "inherits" IDENTIFIER ("," IDENTIFIER)* "{" trait_section* "}"
 
-train_section
+trait_section
     → trait_access_modifers "{" trait_member* "}"
     | "shared" IDENTIFIER "=" expression ";"
 
