@@ -831,9 +831,17 @@ std::unique_ptr<IncludeStmt> Parser::parseIncludeStmt() {
         
         Token moduleToken = consume(TokenType::IDENTIFIER, "Expect module name");
         name = moduleToken.lexeme;
+        while (match(TokenType::DOT)) {
+            Token nextModule = consume(TokenType::IDENTIFIER, "Expect module name after '.'");
+            name += "." + nextModule.lexeme;
+        }
     } else {
         Token moduleToken = consume(TokenType::IDENTIFIER, "Expect module name");
         name = moduleToken.lexeme;
+        while (match(TokenType::DOT)) {
+            Token nextModule = consume(TokenType::IDENTIFIER, "Expect module name after '.'");
+            name += "." + nextModule.lexeme;
+        }
     }
     
     consume(TokenType::SEMICOLON, "Expect ';' after include statement");

@@ -9,6 +9,7 @@
 #include "vm/vm.h"
 #include "vm/utils/serializer.h"
 #include "vm/utils/deserializer.h"
+#include "loader/module_loader.h"
 
 static void printInfo() {
     std::cout << "Hello i am penguin , A brand new programming language !!\n";
@@ -101,26 +102,9 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // 1. Read source file
-    std::ifstream file(filename);
-    if (!file) {
-        std::cerr << "Error: could not open file " << filename << "\n";
-        return 1;
-    }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string source = buffer.str();
-
     try {
-        // 2. Lex
-        Lexer lexer(source);
-        auto tokens = lexer.tokenize();
-
-
-        // 3. Parse
-        Parser parser(tokens);
-        auto program = parser.parse();
+        ModuleLoader loader;
+        auto program = loader.linkFromEntryFile(filename);
 
         // 4. Interpret / Compile
         if (mode == Mode::COMPILE_TO_FILE) {
@@ -145,5 +129,5 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    return 0;
+    return 0;  
 }
