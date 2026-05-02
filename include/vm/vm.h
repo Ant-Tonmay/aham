@@ -23,6 +23,7 @@ public:
     std::vector<CallFrame> frames;
     std::unordered_map<std::string, Value> globals;
     std::vector<ExceptionHandler> exceptionHandlers;
+    Value currentException;
 
     void push(Value v);
     Value pop();

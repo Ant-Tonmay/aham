@@ -151,6 +151,12 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         consume(TokenType::SEMICOLON, "Expect ';' after return");
         return make_node<ReturnStmt>(previous().location, std::move(value));
     }
+    if (check(TokenType::KEYWORD) && peek().lexeme == "throw") {
+        advance();
+        auto value = parseExpression();
+        consume(TokenType::SEMICOLON, "Expect ';' after throw expression.");
+        return make_node<ThrowStmt>(previous().location, std::move(value));
+    }
     if (check(TokenType::KEYWORD) && peek().lexeme == "try") {
         return parseTryCatchStmt();
     }

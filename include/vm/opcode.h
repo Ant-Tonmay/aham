@@ -79,7 +79,8 @@ enum OpCode {
     OP_FIELD,
     OP_TRY_BEGIN,
     OP_TRY_END,
-    OP_THROW
+    OP_THROW,
+    OP_MATCH_TYPE
 };
 
 }

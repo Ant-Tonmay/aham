@@ -145,6 +145,7 @@ void Lexer::identifier() {
         {"try",TokenType::KEYWORD},
         {"catch",TokenType::KEYWORD},
         {"finally",TokenType::KEYWORD},
+        {"throw",TokenType::KEYWORD},
         
     };
 

@@ -180,9 +180,49 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
             }
             return true;
         }
+        case OP_MATCH_TYPE: {
+            uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
+            std::string typeName = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
+            
+            Value exc = stack.back(); // Peeks the exception object
+            bool matches = false;
+            
+            if (std::holds_alternative<InstanceObject*>(exc)) {
+                InstanceObject* inst = std::get<InstanceObject*>(exc);
+                ClassObject* klass = inst->klass;
+                while (klass) {
+                    if (klass->name == typeName) {
+                        matches = true;
+                        break;
+                    }
+                    klass = klass->parent;
+                }
+            } else if (std::holds_alternative<std::string>(exc) && typeName == "String") {
+                matches = true;
+            }
+            
+            push(matches);
+            return true;
+        }
         case OP_THROW: {
-            Value exceptionObj = pop();
-            throwRuntimeError(valueToString(exceptionObj));
+            currentException = pop();
+            
+            if (exceptionHandlers.empty()) {
+                throwRuntimeError("Unhandled exception: " + valueToString(currentException));
+                return false;
+            }
+
+            auto handler = exceptionHandlers.back();
+            exceptionHandlers.pop_back();
+
+            while (frames.size() > handler.frameIndex + 1) {
+                frames.pop_back();
+            }
+
+            stack.resize(handler.stackSize);
+            push(currentException);
+
+            frames.back().ip = handler.catchJumpOffset;
             return true;
         }
         case OP_RETURN:
