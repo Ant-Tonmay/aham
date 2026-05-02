@@ -41,6 +41,7 @@ private:
     void endScope();
     void addLocal(const std::string& name);
     int resolveLocal(const std::string& name);
+    std::vector<Block*> activeFinallyBlocks;
 
     void compileFunction(Function* func);
     void compileExpr(ASTNode*);

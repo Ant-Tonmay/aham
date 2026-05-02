@@ -20,7 +20,15 @@ void Compiler::compileStmt(ASTNode* node) {
         } else {
             emit(OP_NULL);
         }
+        
+        for (auto it = activeFinallyBlocks.rbegin(); it != activeFinallyBlocks.rend(); ++it) {
+            compileStmt(*it);
+        }
+        
         emit(OP_RETURN);
+    } else if (auto* throwStmt = dynamic_cast<ThrowStmt*>(node)) {
+        compileExpr(throwStmt->expression.get());
+        emit(OP_THROW);
     } else if (auto* ifStmt = dynamic_cast<IfStmt*>(node)) {
         compileExpr(ifStmt->condition.get());
         int thenJump = emitJump(OP_JUMP_IF_FALSE);
@@ -474,6 +482,10 @@ void Compiler::compileStmt(ASTNode* node) {
 }
 
 void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
+    if (stmt->finallyBlock) {
+        activeFinallyBlocks.push_back(stmt->finallyBlock.get());
+    }
+
     int tryBeginJump = emitJump(OP_TRY_BEGIN);
     compileStmt(stmt->tryBlock.get());
     emit(OP_TRY_END);
@@ -485,22 +497,31 @@ void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
     std::vector<int> endJumps;
 
     for (auto& catchClause : stmt->catchBlocks) {
-        // Exception object is on stack here!
+        int typeIdx = currentChunk().addConstant(catchClause.exceptionType);
+        emit(OP_MATCH_TYPE);
+        emit(typeIdx);
+        
+        int nextCatchJump = emitJump(OP_JUMP_IF_FALSE);
+        emit(OP_POP); // Pop the 'matches' boolean
+        
         beginScope();
-        
-        // Push block variable
         addLocal(catchClause.variableName);
-        emit(OP_SET_LOCAL);
-        emit(locals.size() - 1); 
-        
         compileStmt(catchClause.block.get());
-        
         endScope(); // pops the exception object local variable
         
         int endJump = emitJump(OP_JUMP);
         endJumps.push_back(endJump);
+
+        patchJump(nextCatchJump);
+        emit(OP_POP); // Pop the 'matches' boolean for the fallthrough (no match) case
     }
     
+    // If no catch block matched, re-throw the exception!
+    // Execute the current finally block before throwing
+    if (stmt->finallyBlock) {
+        compileStmt(stmt->finallyBlock.get());
+    }
+    emit(OP_THROW);
 
     patchJump(skipCatchJump);
     
@@ -509,6 +530,7 @@ void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
     }
     
     if (stmt->finallyBlock) {
+        activeFinallyBlocks.pop_back();
         compileStmt(stmt->finallyBlock.get());
     }
 }

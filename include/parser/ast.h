@@ -154,6 +154,12 @@ struct TryCatchStmt : Stmt {
         : tryBlock(std::move(tryBlock)), catchBlocks(std::move(catchBlocks)), finallyBlock(std::move(finallyBlock)) {}
 };
 
+struct ThrowStmt : Stmt {
+    std::unique_ptr<Expr> expression;
+    explicit ThrowStmt(std::unique_ptr<Expr> expression)
+        : expression(std::move(expression)) {}
+};
+
 
 struct Param {
     std::string name;
