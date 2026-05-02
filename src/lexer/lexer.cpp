@@ -142,6 +142,9 @@ void Lexer::identifier() {
         {"from",TokenType::KEYWORD},
         {"alias",TokenType::KEYWORD},
         {"export",TokenType::KEYWORD},
+        {"try",TokenType::KEYWORD},
+        {"catch",TokenType::KEYWORD},
+        {"finally",TokenType::KEYWORD},
         
     };
 

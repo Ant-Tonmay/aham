@@ -77,5 +77,7 @@ private:
     std::unique_ptr<IncludeStmt> parseIncludeStmt();
     std::unique_ptr<AliasStmt> parseAliasStmt();
 
+    std::unique_ptr<TryCatchStmt> parseTryCatchStmt();
+
     bool isAssignmentOperator(TokenType t);
 };

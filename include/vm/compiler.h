@@ -45,6 +45,7 @@ private:
     void compileFunction(Function* func);
     void compileExpr(ASTNode*);
     void compileStmt(ASTNode*);
+    void compileTryCatchStmt(TryCatchStmt* stmt);
 };
 
 }

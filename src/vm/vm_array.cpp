@@ -42,8 +42,8 @@ bool VM::handleArrayOp(CallFrame& frame, uint8_t instruction) {
             ArrayObject* arr = std::get<ArrayObject*>(arrValue);
             int idx = asInt(idxValue);
             if (idx < 0 || static_cast<size_t>(idx) >= arr->length) {
-                std::cerr << "Runtime error: array index " << idx
-                          << " out of bounds (length " << arr->length << ")." << std::endl;
+                throwRuntimeError("array index " + std::to_string(idx) +
+                                  " out of bounds (length " + std::to_string(arr->length) + ").");
                 return false;
             }
             push(arr->data[idx]);
@@ -61,8 +61,8 @@ bool VM::handleArrayOp(CallFrame& frame, uint8_t instruction) {
             ArrayObject* arr = std::get<ArrayObject*>(arrValue);
             int idx = asInt(idxValue);
             if (idx < 0 || static_cast<size_t>(idx) >= arr->length) {
-                std::cerr << "Runtime error: array index " << idx
-                          << " out of bounds (length " << arr->length << ")." << std::endl;
+                throwRuntimeError("array index " + std::to_string(idx) +
+                                  " out of bounds (length " + std::to_string(arr->length) + ").");
                 return false;
             }
             arr->data[idx] = value;

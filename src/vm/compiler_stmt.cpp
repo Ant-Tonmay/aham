@@ -468,6 +468,48 @@ void Compiler::compileStmt(ASTNode* node) {
         }
 
         emit(OP_POP);
+    } else if (auto* tryStmt = dynamic_cast<TryCatchStmt*>(node)) {
+        compileTryCatchStmt(tryStmt);
+    }
+}
+
+void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
+    int tryBeginJump = emitJump(OP_TRY_BEGIN);
+    compileStmt(stmt->tryBlock.get());
+    emit(OP_TRY_END);
+    
+    int skipCatchJump = emitJump(OP_JUMP);
+    
+    patchJump(tryBeginJump);
+    
+    std::vector<int> endJumps;
+
+    for (auto& catchClause : stmt->catchBlocks) {
+        // Exception object is on stack here!
+        beginScope();
+        
+        // Push block variable
+        addLocal(catchClause.variableName);
+        emit(OP_SET_LOCAL);
+        emit(locals.size() - 1); 
+        
+        compileStmt(catchClause.block.get());
+        
+        endScope(); // pops the exception object local variable
+        
+        int endJump = emitJump(OP_JUMP);
+        endJumps.push_back(endJump);
+    }
+    
+
+    patchJump(skipCatchJump);
+    
+    for (int jump : endJumps) {
+        patchJump(jump);
+    }
+    
+    if (stmt->finallyBlock) {
+        compileStmt(stmt->finallyBlock.get());
     }
 }
 
