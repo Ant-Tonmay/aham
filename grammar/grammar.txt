@@ -24,6 +24,7 @@ statement   →
     | print_stmt ";"
     | println_stmt ";"
     | if_stmt
+    | try_catch_stmt
     | for_stmt
     | while_stmt
     | block
@@ -95,6 +96,10 @@ else_part      →
             "else" if_stmt 
             | "else" block
             | ε
+
+try_catch_stmt
+    → 
+        "try" "{" block "}" ( "catch" "{" block "}" )* ( "finally" "{" block "}" )? 
 
 assignment_stmt → assignment ("," assignment)*
 assignment →

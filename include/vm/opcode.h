@@ -76,7 +76,10 @@ enum OpCode {
     OP_ALIAS,
     OP_LOAD,
     OP_STORE,
-    OP_FIELD
+    OP_FIELD,
+    OP_TRY_BEGIN,
+    OP_TRY_END,
+    OP_THROW
 };
 
 }

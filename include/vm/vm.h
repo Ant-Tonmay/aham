@@ -11,11 +11,18 @@ struct CallFrame {
     size_t base;  // stack base for this call frame
 };
 
+struct ExceptionHandler {
+    size_t frameIndex;
+    size_t catchJumpOffset;
+    size_t stackSize;
+};
+
 class VM {
 public:
     std::vector<Value> stack;
     std::vector<CallFrame> frames;
     std::unordered_map<std::string, Value> globals;
+    std::vector<ExceptionHandler> exceptionHandlers;
 
     void push(Value v);
     Value pop();

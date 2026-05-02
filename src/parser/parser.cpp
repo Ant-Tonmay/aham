@@ -140,7 +140,8 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
     if (check(TokenType::KEYWORD) && peek().lexeme == "trait") {
         return parseTraitStmt();
     }
-    if (match(TokenType::KEYWORD) && previous().lexeme == "return") {
+    if (check(TokenType::KEYWORD) && peek().lexeme == "return") {
+        advance();
         std::unique_ptr<Expr> value = nullptr;
 
         if (!check(TokenType::SEMICOLON)) {
@@ -150,7 +151,9 @@ std::unique_ptr<Stmt> Parser::parseStatement() {
         consume(TokenType::SEMICOLON, "Expect ';' after return");
         return make_node<ReturnStmt>(previous().location, std::move(value));
     }
-    
+    if (check(TokenType::KEYWORD) && peek().lexeme == "try") {
+        return parseTryCatchStmt();
+    }
     auto expr = parseExpression();
     TokenType opType = peek().type;
     if (isAssignmentOperator(opType)) {
@@ -892,4 +895,50 @@ std::unique_ptr<ExportStmt> Parser::parseExportStmt(){
     consume(TokenType::RBRACE ,"Expected '}' .");
     consume(TokenType::SEMICOLON, "Expected ';' after } while exporting");
     return make_node<ExportStmt>(previous().location, std::move(export_mods));
+}
+
+
+std::unique_ptr<TryCatchStmt> Parser::parseTryCatchStmt() {
+    SourceLocation loc = peek().location;
+    advance(); // Consume "try"
+    
+    // parseBlock() automatically consumes the '{' and '}'
+    auto try_block = parseBlock();
+
+    std::vector<CatchClause> catch_blocks;
+
+    // Use a while loop to support multiple catch blocks
+    while (check(TokenType::KEYWORD) && peek().lexeme == "catch") {
+        advance(); // Consume "catch"
+        consume(TokenType::LPAREN, "Expect '(' after 'catch'. ");
+        
+        std::string type = "";
+        std::string var = "";
+        
+        if (check(TokenType::IDENTIFIER)) {
+            std::string first = consume(TokenType::IDENTIFIER, "Expect exception type or variable name").lexeme;
+            // If there's a second identifier, the first was the type and the second is the variable
+            if (check(TokenType::IDENTIFIER)) {
+                type = first;
+                var = consume(TokenType::IDENTIFIER, "Expect catch variable name").lexeme;
+            } else {
+                // Only one identifier provided, so it's a catch-all variable like `catch(e)`
+                var = first;
+            }
+        }
+        
+        consume(TokenType::RPAREN, "Expect ')' after catch variable");
+        
+        auto block = parseBlock(); // parseBlock() automatically consumes '{' and '}'
+        catch_blocks.emplace_back(type, var, std::move(block));
+    }
+
+    std::unique_ptr<Block> finally_block = nullptr;
+    if (check(TokenType::KEYWORD) && peek().lexeme == "finally") {
+        advance(); // Consume "finally"
+        finally_block = parseBlock(); // parseBlock() automatically consumes '{' and '}'
+    }
+
+    // Return the newly constructed AST Node!
+    return make_node<TryCatchStmt>(loc, std::move(try_block), std::move(catch_blocks), std::move(finally_block));
 }

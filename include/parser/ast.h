@@ -133,7 +133,26 @@ struct IfStmt : Stmt {
           elseBranch(std::move(elseBranch)) {}
 };
 
+struct CatchClause {
+    std::string exceptionType;
+    std::string variableName; 
+    std::unique_ptr<Block> block;
+    
+    CatchClause(std::string type, std::string var, std::unique_ptr<Block> blk)
+        : exceptionType(std::move(type)), variableName(std::move(var)), block(std::move(blk)) {}
+};
 
+
+struct TryCatchStmt : Stmt {
+    std::unique_ptr<Block> tryBlock;
+    std::vector<CatchClause> catchBlocks;
+    std::unique_ptr<Block> finallyBlock;
+
+    TryCatchStmt(std::unique_ptr<Block> tryBlock,
+                 std::vector<CatchClause> catchBlocks,
+                 std::unique_ptr<Block> finallyBlock)
+        : tryBlock(std::move(tryBlock)), catchBlocks(std::move(catchBlocks)), finallyBlock(std::move(finallyBlock)) {}
+};
 
 
 struct Param {

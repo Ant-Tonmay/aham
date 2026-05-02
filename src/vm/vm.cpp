@@ -17,6 +17,11 @@ void VM::throwRuntimeError(const std::string& message) {
     if (!frame.function->chunk.locations.empty() && idx < frame.function->chunk.locations.size()) {
         loc = frame.function->chunk.locations[idx];
     }
+
+    if (!exceptionHandlers.empty()) {
+        throw RuntimeError(message, loc); // VM::run will catch it and jump
+    }
+
     throw RuntimeError(message, loc);
 }
 
@@ -36,8 +41,28 @@ void VM::run(FunctionObject* script) {
     while (true) {
         auto& frame = frames.back();
         uint8_t instruction = frame.function->chunk.code[frame.ip++];
-        if (!executeInstruction(frame, instruction)) {
-            return;
+        
+        try {
+            if (!executeInstruction(frame, instruction)) {
+                return;
+            }
+        } catch (const RuntimeError& e) {
+            if (!exceptionHandlers.empty()) {
+                auto handler = exceptionHandlers.back();
+                exceptionHandlers.pop_back();
+
+                while (frames.size() > handler.frameIndex + 1) {
+                    frames.pop_back();
+                }
+
+                stack.resize(handler.stackSize);
+                push(e.message);
+
+                frames.back().ip = handler.catchJumpOffset;
+                continue;
+            } else {
+                throw; // Rethrow to top level
+            }
         }
     }
 }
@@ -138,6 +163,28 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
 
         case OP_CALL:
             return handleCall(frame);
+
+        case OP_TRY_BEGIN: {
+            uint16_t offset = (frame.function->chunk.code[frame.ip] << 8) | frame.function->chunk.code[frame.ip + 1];
+            frame.ip += 2;
+            exceptionHandlers.push_back({
+                frames.size() - 1,
+                frame.ip + offset,
+                stack.size()
+            });
+            return true;
+        }
+        case OP_TRY_END: {
+            if (!exceptionHandlers.empty()) {
+                exceptionHandlers.pop_back();
+            }
+            return true;
+        }
+        case OP_THROW: {
+            Value exceptionObj = pop();
+            throwRuntimeError(valueToString(exceptionObj));
+            return true;
+        }
         case OP_RETURN:
             return handleReturn(frame);
 
