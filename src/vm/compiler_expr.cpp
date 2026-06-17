@@ -88,7 +88,7 @@ void Compiler::compileExpr(ASTNode* node) {
         }
     } else if (auto* call = dynamic_cast<CallExpr*>(node)) {
         if (auto* calleeName = dynamic_cast<VarExpr*>(call->callee.get())) {
-            if (calleeName->name == "fixed") {
+            if (calleeName->name == "shape") {
                 for (const auto& arg : call->arguments) {
                     compileExpr(arg.get());
                 }

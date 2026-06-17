@@ -1,4 +1,5 @@
 #include "parser/parser.h"
+#include "exceptions/error.h"
 #include <iostream>
 #include <vector>
 #include <cassert>
@@ -55,13 +56,13 @@ void testBasicArray() {
 }
 
 void testArrayWithCall() {
-    std::cout << "Testing Array with Call: [fixed(5)]..." << std::endl;
-    // brr = [fixed(5)];
+    std::cout << "Testing Array with Call: [foo(5)]..." << std::endl;
+    // brr = [foo(5)];
     std::vector<Token> tokens = {
         Token(TokenType::IDENTIFIER, "brr"),
         Token(TokenType::EQUAL, "="),
         Token(TokenType::LBRACKET, "["),
-        Token(TokenType::IDENTIFIER, "fixed"),
+        Token(TokenType::IDENTIFIER, "foo"),
         Token(TokenType::LPAREN, "("),
         Token(TokenType::NUMBER, "5"),
         Token(TokenType::RPAREN, ")"),
@@ -83,8 +84,54 @@ void testArrayWithCall() {
     
     auto* callee = dynamic_cast<VarExpr*>(callExpr->callee.get());
     ASSERT_NOT_NULL(callee);
-    ASSERT_EQ(callee->name, "fixed");
+    ASSERT_EQ(callee->name, "foo");
     ASSERT_EQ(callExpr->arguments.size(), 1);
+}
+
+void testArrayRejectsShapeCall() {
+    std::cout << "Testing Array rejects shaped constructor: [shape(5)]..." << std::endl;
+    std::vector<Token> tokens = {
+        Token(TokenType::IDENTIFIER, "brr"),
+        Token(TokenType::EQUAL, "="),
+        Token(TokenType::LBRACKET, "["),
+        Token(TokenType::IDENTIFIER, "shape"),
+        Token(TokenType::LPAREN, "("),
+        Token(TokenType::NUMBER, "5"),
+        Token(TokenType::RPAREN, ")"),
+        Token(TokenType::RBRACKET, "]"),
+        Token(TokenType::SEMICOLON, ";")
+    };
+
+    try {
+        auto program = parseTokens(tokens);
+        (void)program;
+        std::cerr << "Assertion failed: [shape(5)] should be rejected at line " << __LINE__ << std::endl;
+        exit(1);
+    } catch (const CompileError&) {
+    }
+}
+
+void testArrayRejectsFixedCall() {
+    std::cout << "Testing Array rejects legacy shaped constructor: [fixed(5)]..." << std::endl;
+    std::vector<Token> tokens = {
+        Token(TokenType::IDENTIFIER, "brr"),
+        Token(TokenType::EQUAL, "="),
+        Token(TokenType::LBRACKET, "["),
+        Token(TokenType::IDENTIFIER, "fixed"),
+        Token(TokenType::LPAREN, "("),
+        Token(TokenType::NUMBER, "5"),
+        Token(TokenType::RPAREN, ")"),
+        Token(TokenType::RBRACKET, "]"),
+        Token(TokenType::SEMICOLON, ";")
+    };
+
+    try {
+        auto program = parseTokens(tokens);
+        (void)program;
+        std::cerr << "Assertion failed: [fixed(5)] should be rejected at line " << __LINE__ << std::endl;
+        exit(1);
+    } catch (const CompileError&) {
+    }
 }
 
 void testMethodCall() {
@@ -120,24 +167,20 @@ void testMethodCall() {
 }
 
 void testNestedCalls() {
-    std::cout << "Testing Nested Calls: [fixed(n, [fixed(n)])]..." << std::endl;
-    // multidim2 = [fixed(n, [fixed(n)])];
+    std::cout << "Testing Nested Calls: shape(n, shape(n))..." << std::endl;
+    // multidim2 = shape(n, shape(n));
     std::vector<Token> tokens = {
         Token(TokenType::IDENTIFIER, "multidim2"),
         Token(TokenType::EQUAL, "="),
-        Token(TokenType::LBRACKET, "["),
-        Token(TokenType::IDENTIFIER, "fixed"),
+        Token(TokenType::IDENTIFIER, "shape"),
         Token(TokenType::LPAREN, "("),
         Token(TokenType::IDENTIFIER, "n"),
         Token(TokenType::COMMA, ","),
-        Token(TokenType::LBRACKET, "["),
-        Token(TokenType::IDENTIFIER, "fixed"),
+        Token(TokenType::IDENTIFIER, "shape"),
         Token(TokenType::LPAREN, "("),
         Token(TokenType::IDENTIFIER, "n"),
         Token(TokenType::RPAREN, ")"),
-        Token(TokenType::RBRACKET, "]"),
         Token(TokenType::RPAREN, ")"),
-        Token(TokenType::RBRACKET, "]"),
         Token(TokenType::SEMICOLON, ";")
     };
 
@@ -146,22 +189,21 @@ void testNestedCalls() {
     auto& func = program->functions[0];
     auto* assignStmt = dynamic_cast<AssignmentStmt*>(func->body->statements[0].get());
     
-    auto* arrayExpr = dynamic_cast<ArrayExpr*>(assignStmt->assignments[0].value.get());
-    ASSERT_NOT_NULL(arrayExpr);
-    
-    // Outer fixed(...)
-    auto* outerCall = dynamic_cast<CallExpr*>(arrayExpr->elements[0].get());
+    auto* outerCall = dynamic_cast<CallExpr*>(assignStmt->assignments[0].value.get());
     ASSERT_NOT_NULL(outerCall);
     ASSERT_EQ(outerCall->arguments.size(), 2);
     
-    // Second argument is inner array [fixed(n)]
-    auto* innerArray = dynamic_cast<ArrayExpr*>(outerCall->arguments[1].get());
-    ASSERT_NOT_NULL(innerArray);
-    
-    // Inner fixed(n)
-    auto* innerCall = dynamic_cast<CallExpr*>(innerArray->elements[0].get());
+    auto* outerCallee = dynamic_cast<VarExpr*>(outerCall->callee.get());
+    ASSERT_NOT_NULL(outerCallee);
+    ASSERT_EQ(outerCallee->name, "shape");
+
+    auto* innerCall = dynamic_cast<CallExpr*>(outerCall->arguments[1].get());
     ASSERT_NOT_NULL(innerCall);
     ASSERT_EQ(innerCall->arguments.size(), 1);
+
+    auto* innerCallee = dynamic_cast<VarExpr*>(innerCall->callee.get());
+    ASSERT_NOT_NULL(innerCallee);
+    ASSERT_EQ(innerCallee->name, "shape");
 }
 void test4DArray() {
     std::cout << "Testing 4D Array..." << std::endl;
@@ -268,6 +310,8 @@ int main() {
     std::cout << "Running Parser Array Tests..." << std::endl;
     testBasicArray();
     testArrayWithCall();
+    testArrayRejectsShapeCall();
+    testArrayRejectsFixedCall();
     testMethodCall();
     testNestedCalls();
     test4DArray();
