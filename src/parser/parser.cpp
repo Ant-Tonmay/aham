@@ -460,7 +460,15 @@ std::unique_ptr<Expr> Parser::parsePrimary() {
 
         if (!check(TokenType::RBRACKET)) {
             do {
-                elements.push_back(parseExpression());
+                auto element = parseExpression();
+                if (auto* call = dynamic_cast<CallExpr*>(element.get())) {
+                    if (auto* callee = dynamic_cast<VarExpr*>(call->callee.get())) {
+                        if (callee->name == "shape") {
+                            throw CompileError("Use " + callee->name + "(...) directly; do not wrap it in an array literal.", previous().location);
+                        }
+                    }
+                }
+                elements.push_back(std::move(element));
             } while (match(TokenType::COMMA));
         }
 

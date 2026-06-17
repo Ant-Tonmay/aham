@@ -16,10 +16,10 @@ bool VM::handleArrayOp(CallFrame& frame, uint8_t instruction) {
                 elements[i] = pop();
             }
 
-            if (count == 1 && std::holds_alternative<ArrayObject*>(elements[0])) {
-                push(elements[0]);
-                return true;
-            }
+            // if (count == 1 && std::holds_alternative<ArrayObject*>(elements[0])) {
+            //     push(elements[0]);
+            //     return true;
+            // }
 
             ArrayObject* arr = new ArrayObject();
             arr->length = count;

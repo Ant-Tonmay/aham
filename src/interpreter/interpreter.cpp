@@ -86,7 +86,7 @@ Value Interpreter::callFunctionByName(const std::string& name, const std::vector
         std::cout << std::endl;
         return std::monostate{};
     }
-    else if (name == "fixed") {
+    else if (name == "shape") {
         // fixed(size, init?) -> ArrayObject*
         if (args.size() < 1 || args.size() > 2) throw std::runtime_error("fixed(size, init?) expects 1 or 2 arguments.");
         if (!std::holds_alternative<int>(args[0])) throw std::runtime_error("fixed() size must be an integer.");
