@@ -24,6 +24,9 @@ public:
     std::unordered_map<std::string, Value> globals;
     std::vector<ExceptionHandler> exceptionHandlers;
     Value currentException;
+    bool hasPendingReturn = false;
+    Value pendingReturnValue;
+
 
     void push(Value v);
     Value pop();
@@ -43,6 +46,9 @@ private:
     bool handleTraitOp(CallFrame& frame, uint8_t instruction);
     bool handleCastOp(uint8_t instruction);
     bool handleInputOp(uint8_t instruction);
+    void registerBuiltins();
+    void throwPenguinException(const std::string& className, const std::string& message);
+
 };
 
 }

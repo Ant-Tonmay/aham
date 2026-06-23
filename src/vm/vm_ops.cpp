@@ -46,6 +46,9 @@ bool VM::handleArithmetic(uint8_t instruction) {
         case OP_DIVIDE_EQUAL: {
             double b = asDouble(pop());
             double a = asDouble(pop());
+            if (b == 0) {
+                throwPenguinException("DivisionByZeroException","Cannot divide by zero.");
+            }
             push(a / b);
             return true;
         }

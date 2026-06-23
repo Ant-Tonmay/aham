@@ -5,71 +5,136 @@
 #include <iostream>
 #include "exceptions/error.h"
 
-namespace vm {
+namespace vm
+{
 
-void VM::throwRuntimeError(const std::string& message) {
-    if (frames.empty()) {
-        throw RuntimeError(message, {"", 0, 0});
+    void VM::throwRuntimeError(const std::string &message)
+    {
+        if (frames.empty())
+        {
+            throw RuntimeError(message, {"", 0, 0});
+        }
+        auto &frame = frames.back();
+        SourceLocation loc = {"", 0, 0};
+        size_t idx = frame.ip > 0 ? frame.ip - 1 : 0;
+        if (!frame.function->chunk.locations.empty() && idx < frame.function->chunk.locations.size())
+        {
+            loc = frame.function->chunk.locations[idx];
+        }
+
+        if (!exceptionHandlers.empty())
+        {
+            throw RuntimeError(message, loc); // VM::run will catch it and jump
+        }
+
+        throw RuntimeError(message, loc);
     }
-    auto& frame = frames.back();
-    SourceLocation loc = {"", 0, 0};
-    size_t idx = frame.ip > 0 ? frame.ip - 1 : 0;
-    if (!frame.function->chunk.locations.empty() && idx < frame.function->chunk.locations.size()) {
-        loc = frame.function->chunk.locations[idx];
+    void VM::throwPenguinException(const std::string &className, const std::string &message)
+    {
+        // Look up the built-in class from globals
+        Value klassVal = globals.count(className) ? globals[className] : globals["RuntimeException"];
+        ClassObject *klass = std::get<ClassObject *>(klassVal);
+
+        // Create an instance and set .message
+        InstanceObject *inst = new InstanceObject(klass);
+        inst->fields["message"] = message;
+
+        // Put the source location in a .location field as a string
+        auto &frame = frames.back();
+        size_t idx = frame.ip > 0 ? frame.ip - 1 : 0;
+        if (!frame.function->chunk.locations.empty() && idx < frame.function->chunk.locations.size())
+        {
+            SourceLocation loc = frame.function->chunk.locations[idx];
+            inst->fields["source"] = loc.line;
+            inst->fields["line"] = static_cast<int64_t>(loc.line_num);
+            inst->fields["column"] = static_cast<int64_t>(loc.col_num);
+        }
+
+        // Simulate OP_THROW: push and jump to handler, or rethrow
+        if (!exceptionHandlers.empty())
+        {
+            auto handler = exceptionHandlers.back();
+            exceptionHandlers.pop_back();
+            while (frames.size() > handler.frameIndex + 1)
+                frames.pop_back();
+            stack.resize(handler.stackSize);
+            push(inst);
+            frames.back().ip = handler.catchJumpOffset;
+            // Signal to the caller to restart the dispatch loop
+            throw PenguinThrow{}; // ← a new internal signal (see 2.2)
+        }
+        else
+        {
+            // Unhandled — format and throw to C++ top level
+            throw RuntimeError("[" + className + "] " + message, {});
+        }
     }
 
-    if (!exceptionHandlers.empty()) {
-        throw RuntimeError(message, loc); // VM::run will catch it and jump
+    void VM::push(Value value)
+    {
+        stack.push_back(value);
     }
 
-    throw RuntimeError(message, loc);
-}
+    Value VM::pop()
+    {
+        Value value = stack.back();
+        stack.pop_back();
+        return value;
+    }
 
-void VM::push(Value value) {
-    stack.push_back(value);
-}
+    void VM::run(FunctionObject *script)
+    {
+        registerBuiltins();
+        frames.push_back({script, 0, 0});
 
-Value VM::pop() {
-    Value value = stack.back();
-    stack.pop_back();
-    return value;
-}
+        while (true)
+        {
+            auto &frame = frames.back();
+            uint8_t instruction = frame.function->chunk.code[frame.ip++];
 
-void VM::run(FunctionObject* script) {
-    frames.push_back({script, 0, 0});
-
-    while (true) {
-        auto& frame = frames.back();
-        uint8_t instruction = frame.function->chunk.code[frame.ip++];
-        
-        try {
-            if (!executeInstruction(frame, instruction)) {
-                return;
-            }
-        } catch (const RuntimeError& e) {
-            if (!exceptionHandlers.empty()) {
-                auto handler = exceptionHandlers.back();
-                exceptionHandlers.pop_back();
-
-                while (frames.size() > handler.frameIndex + 1) {
-                    frames.pop_back();
+            try
+            {
+                if (!executeInstruction(frame, instruction))
+                {
+                    return;
                 }
+            }
+            catch (const PenguinThrow&)
+            {
+                continue;  // Handler was already set up by throwPenguinException
+            }
+            catch (const RuntimeError &e)
+            {
+                if (!exceptionHandlers.empty())
+                {
+                    auto handler = exceptionHandlers.back();
+                    exceptionHandlers.pop_back();
 
-                stack.resize(handler.stackSize);
-                push(e.message);
+                    while (frames.size() > handler.frameIndex + 1)
+                    {
+                        frames.pop_back();
+                    }
 
-                frames.back().ip = handler.catchJumpOffset;
-                continue;
-            } else {
-                throw; // Rethrow to top level
+                    stack.resize(handler.stackSize);
+                    push(e.message);
+
+                    frames.back().ip = handler.catchJumpOffset;
+                    continue;
+                }
+                else
+                {
+                    throw; // Rethrow to top level
+                }
             }
         }
     }
-}
 
-bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
-    switch (instruction) {
-        case OP_CONSTANT: {
+    bool VM::executeInstruction(CallFrame &frame, uint8_t instruction)
+    {
+        switch (instruction)
+        {
+        case OP_CONSTANT:
+        {
             uint8_t idx = frame.function->chunk.code[frame.ip++];
             push(frame.function->chunk.constants[idx]);
             return true;
@@ -83,64 +148,92 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
         case OP_NULL:
             push(std::monostate{});
             return true;
-        case OP_GET_LOCAL: {
+        case OP_GET_LOCAL:
+        {
             uint8_t slot = frame.function->chunk.code[frame.ip++];
             Value val = stack[frame.base + slot];
-            if (std::holds_alternative<ReferenceObject*>(val)) {
-                ReferenceObject* ref = std::get<ReferenceObject*>(val);
-                if (ref->type == ReferenceObject::Type::LOCAL) {
+            if (std::holds_alternative<ReferenceObject *>(val))
+            {
+                ReferenceObject *ref = std::get<ReferenceObject *>(val);
+                if (ref->type == ReferenceObject::Type::LOCAL)
+                {
                     push(stack[ref->stackIndex]);
-                } else if (ref->type == ReferenceObject::Type::GLOBAL) {
+                }
+                else if (ref->type == ReferenceObject::Type::GLOBAL)
+                {
                     push(globals[ref->name]);
                 }
-            } else {
+            }
+            else
+            {
                 push(val);
             }
             return true;
         }
-        case OP_SET_LOCAL: {
+        case OP_SET_LOCAL:
+        {
             uint8_t slot = frame.function->chunk.code[frame.ip++];
-            Value& target = stack[frame.base + slot];
-            if (std::holds_alternative<ReferenceObject*>(target)) {
-                ReferenceObject* ref = std::get<ReferenceObject*>(target);
-                if (ref->type == ReferenceObject::Type::LOCAL) {
+            Value &target = stack[frame.base + slot];
+            if (std::holds_alternative<ReferenceObject *>(target))
+            {
+                ReferenceObject *ref = std::get<ReferenceObject *>(target);
+                if (ref->type == ReferenceObject::Type::LOCAL)
+                {
                     stack[ref->stackIndex] = stack.back();
-                } else if (ref->type == ReferenceObject::Type::GLOBAL) {
+                }
+                else if (ref->type == ReferenceObject::Type::GLOBAL)
+                {
                     globals[ref->name] = stack.back();
                 }
-            } else {
+            }
+            else
+            {
                 target = stack.back();
             }
             return true;
         }
-        case OP_GET_GLOBAL: {
+        case OP_GET_GLOBAL:
+        {
             uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
             Value val = globals[name];
-            if (std::holds_alternative<ReferenceObject*>(val)) {
-                ReferenceObject* ref = std::get<ReferenceObject*>(val);
-                if (ref->type == ReferenceObject::Type::LOCAL) {
+            if (std::holds_alternative<ReferenceObject *>(val))
+            {
+                ReferenceObject *ref = std::get<ReferenceObject *>(val);
+                if (ref->type == ReferenceObject::Type::LOCAL)
+                {
                     push(stack[ref->stackIndex]);
-                } else if (ref->type == ReferenceObject::Type::GLOBAL) {
+                }
+                else if (ref->type == ReferenceObject::Type::GLOBAL)
+                {
                     push(globals[ref->name]);
                 }
-            } else {
+            }
+            else
+            {
                 push(val);
             }
             return true;
         }
-        case OP_SET_GLOBAL: {
+        case OP_SET_GLOBAL:
+        {
             uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
-            Value& target = globals[name];
-            if (std::holds_alternative<ReferenceObject*>(target)) {
-                ReferenceObject* ref = std::get<ReferenceObject*>(target);
-                if (ref->type == ReferenceObject::Type::LOCAL) {
+            Value &target = globals[name];
+            if (std::holds_alternative<ReferenceObject *>(target))
+            {
+                ReferenceObject *ref = std::get<ReferenceObject *>(target);
+                if (ref->type == ReferenceObject::Type::LOCAL)
+                {
                     stack[ref->stackIndex] = stack.back();
-                } else if (ref->type == ReferenceObject::Type::GLOBAL) {
+                }
+                else if (ref->type == ReferenceObject::Type::GLOBAL)
+                {
                     globals[ref->name] = stack.back();
                 }
-            } else {
+            }
+            else
+            {
                 target = stack.back();
             }
             return true;
@@ -190,12 +283,14 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
         case OP_LOOP:
             return handleJump(frame, instruction);
 
-        case OP_PRINT: {
+        case OP_PRINT:
+        {
             Value value = pop();
             std::cout << valueToString(value);
             return true;
         }
-        case OP_PRINTLN: {
+        case OP_PRINTLN:
+        {
             Value value = pop();
             std::cout << valueToString(value) << std::endl;
             return true;
@@ -204,71 +299,106 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
         case OP_CALL:
             return handleCall(frame);
 
-        case OP_TRY_BEGIN: {
+        case OP_TRY_BEGIN:
+        {
             uint16_t offset = (frame.function->chunk.code[frame.ip] << 8) | frame.function->chunk.code[frame.ip + 1];
             frame.ip += 2;
-            exceptionHandlers.push_back({
-                frames.size() - 1,
-                frame.ip + offset,
-                stack.size()
-            });
+            exceptionHandlers.push_back({frames.size() - 1,
+                                         frame.ip + offset,
+                                         stack.size()});
             return true;
         }
-        case OP_TRY_END: {
-            if (!exceptionHandlers.empty()) {
+        case OP_TRY_END:
+        {
+            if (!exceptionHandlers.empty())
+            {
                 exceptionHandlers.pop_back();
             }
             return true;
         }
-        case OP_MATCH_TYPE: {
+        case OP_MATCH_TYPE:
+        {
             uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
             std::string typeName = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
-            
-            Value exc = stack.back(); // Peeks the exception object
+            Value exc = stack.back();
             bool matches = false;
-            
-            if (std::holds_alternative<InstanceObject*>(exc)) {
-                InstanceObject* inst = std::get<InstanceObject*>(exc);
-                ClassObject* klass = inst->klass;
-                while (klass) {
-                    if (klass->name == typeName) {
+            if (typeName == "Any")
+            {
+                // "Any" catches everything
+                matches = true;
+            }
+            else if (std::holds_alternative<InstanceObject *>(exc))
+            {
+                // Walk the class inheritance chain
+                InstanceObject *inst = std::get<InstanceObject *>(exc);
+                ClassObject *klass = inst->klass;
+                while (klass)
+                {
+                    if (klass->name == typeName)
+                    {
                         matches = true;
                         break;
                     }
                     klass = klass->parent;
                 }
-            } else if (std::holds_alternative<std::string>(exc) && typeName == "String") {
+            }
+            else if (std::holds_alternative<std::string>(exc) && typeName == "String")
+            {
                 matches = true;
             }
-            
+            else if (std::holds_alternative<int64_t>(exc) && typeName == "Int")
+            {
+                matches = true;
+            }
+            else if (std::holds_alternative<double>(exc) && typeName == "Float")
+            {
+                matches = true;
+            }
+            else if (std::holds_alternative<bool>(exc) && typeName == "Bool")
+            {
+                matches = true;
+            }
+            else if (std::holds_alternative<char>(exc) && typeName == "Char")
+            {
+                matches = true;
+            }
+            else if (std::holds_alternative<std::monostate>(exc) && typeName == "Null")
+            {
+                matches = true;
+            }
             push(matches);
             return true;
         }
-        case OP_DEEP_COPY: {
+        case OP_DEEP_COPY:
+        {
             push(deepCopyIfNeeded(pop()));
             return true;
         }
-        case OP_MAKE_REF_LOCAL: {
+        case OP_MAKE_REF_LOCAL:
+        {
             uint8_t slot = frame.function->chunk.code[frame.ip++];
-            ReferenceObject* ref = new ReferenceObject();
+            ReferenceObject *ref = new ReferenceObject();
             ref->type = ReferenceObject::Type::LOCAL;
             ref->stackIndex = frame.base + slot;
             push(ref);
             return true;
         }
-        case OP_MAKE_REF_GLOBAL: {
+        case OP_MAKE_REF_GLOBAL:
+        {
             uint8_t nameIdx = frame.function->chunk.code[frame.ip++];
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
-            ReferenceObject* ref = new ReferenceObject();
+            ReferenceObject *ref = new ReferenceObject();
             ref->type = ReferenceObject::Type::GLOBAL;
             ref->name = name;
             push(ref);
             return true;
         }
-        case OP_THROW: {
+        case OP_THROW:
+        {
             currentException = pop();
-            
-            if (exceptionHandlers.empty()) {
+
+            if (exceptionHandlers.empty())
+            {
                 throwRuntimeError("Unhandled exception: " + valueToString(currentException));
                 return false;
             }
@@ -276,7 +406,8 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
             auto handler = exceptionHandlers.back();
             exceptionHandlers.pop_back();
 
-            while (frames.size() > handler.frameIndex + 1) {
+            while (frames.size() > handler.frameIndex + 1)
+            {
                 frames.pop_back();
             }
 
@@ -308,7 +439,7 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
             return handleClassOp(frame, instruction);
 
         case OP_TRAIT:
-            return handleTraitOp(frame, instruction); 
+            return handleTraitOp(frame, instruction);
 
         case OP_CAST_INT:
         case OP_CAST_FLOAT:
@@ -320,13 +451,30 @@ bool VM::executeInstruction(CallFrame& frame, uint8_t instruction) {
         case OP_READLINE:
             return handleInputOp(instruction);
 
+        case OP_SAVE_RETURN:
+        {
+            pendingReturnValue = pop();
+            hasPendingReturn = true;
+            return true;
+        }
+        case OP_RESTORE_RETURN:
+        {
+            if (hasPendingReturn)
+            {
+                hasPendingReturn = false;
+                push(pendingReturnValue);
+                return handleReturn(frames.back());
+            }
+            return true;
+        }
+
         case OP_HALT:
             return false;
 
         default:
             std::cerr << "Runtime error: unknown opcode " << static_cast<int>(instruction) << std::endl;
             return false;
+        }
     }
-}
 
-}  // namespace vm
+} // namespace vm

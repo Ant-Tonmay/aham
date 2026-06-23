@@ -83,7 +83,10 @@ enum OpCode {
     OP_MATCH_TYPE,
     OP_DEEP_COPY,
     OP_MAKE_REF_LOCAL,
-    OP_MAKE_REF_GLOBAL
+    OP_MAKE_REF_GLOBAL,
+    OP_SAVE_RETURN,    // Saves the pending return value into a VM register
+    OP_RESTORE_RETURN, // Restores the saved return value and executes OP_RETURN
+
 };
 
 }

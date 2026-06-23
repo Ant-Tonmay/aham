@@ -21,11 +21,15 @@ void Compiler::compileStmt(ASTNode* node) {
             emit(OP_NULL);
         }
         
-        for (auto it = activeFinallyBlocks.rbegin(); it != activeFinallyBlocks.rend(); ++it) {
-            compileStmt(*it);
+        if (!activeFinallyContexts.empty()) {
+            // Save the return value, then jump to the innermost finally block.
+            // After finally runs, OP_RESTORE_RETURN will execute the actual return.
+            emit(OP_SAVE_RETURN);
+            int jumpToFinally = emitJump(OP_JUMP);
+            activeFinallyContexts.back().pendingJumps->push_back(jumpToFinally);
+        } else {
+            emit(OP_RETURN);
         }
-        
-        emit(OP_RETURN);
     } else if (auto* throwStmt = dynamic_cast<ThrowStmt*>(node)) {
         compileExpr(throwStmt->expression.get());
         emit(OP_THROW);
@@ -553,22 +557,32 @@ void Compiler::compileStmt(ASTNode* node) {
 }
 
 void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
+    // jumpsToFinally collects all forward jumps that need to land at the
+    std::vector<int> jumpsToFinally;
+
+    // If there's a finally block, push a FinallyContext so that any
+    // `return` compiled inside the try/catch body can register a jump.
     if (stmt->finallyBlock) {
-        activeFinallyBlocks.push_back(stmt->finallyBlock.get());
+        activeFinallyContexts.push_back({&jumpsToFinally});
     }
 
+    // --- try body ---
     int tryBeginJump = emitJump(OP_TRY_BEGIN);
     compileStmt(stmt->tryBlock.get());
     emit(OP_TRY_END);
     
+    // After try body succeeds, skip the catch dispatch.
     int skipCatchJump = emitJump(OP_JUMP);
     
+    // --- catch dispatch (handler entry point) ---
     patchJump(tryBeginJump);
     
-    std::vector<int> endJumps;
+     std::vector<int> catchExitJumps;
 
     for (auto& catchClause : stmt->catchBlocks) {
-        int typeIdx = currentChunk().addConstant(catchClause.exceptionType);
+        std::string matchType = catchClause.exceptionType.empty() ? "Any" : catchClause.exceptionType;
+        int typeIdx = currentChunk().addConstant(matchType);
+        
         emit(OP_MATCH_TYPE);
         emit(typeIdx);
         
@@ -581,29 +595,41 @@ void Compiler::compileTryCatchStmt(TryCatchStmt* stmt) {
         endScope(); // pops the exception object local variable
         
         int endJump = emitJump(OP_JUMP);
-        endJumps.push_back(endJump);
+        catchExitJumps.push_back(endJump);
 
         patchJump(nextCatchJump);
         emit(OP_POP); // Pop the 'matches' boolean for the fallthrough (no match) case
     }
     
-    // If no catch block matched, re-throw the exception!
-    // Execute the current finally block before throwing
+    // --- no catch matched: re-throw ---
+
     if (stmt->finallyBlock) {
         compileStmt(stmt->finallyBlock.get());
     }
     emit(OP_THROW);
 
+    // --- normal exit (from try) + catch exit: all land here ---
     patchJump(skipCatchJump);
-    
-    for (int jump : endJumps) {
+
+    for (int jump : catchExitJumps) {
         patchJump(jump);
     }
-    
+
     if (stmt->finallyBlock) {
-        activeFinallyBlocks.pop_back();
+        // Pop the FinallyContext before emitting the finally block
+        activeFinallyContexts.pop_back();
+
+        //
+        // all returns jump here
+        //
+        for (int jump : jumpsToFinally) {
+            patchJump(jump);
+        }
+
         compileStmt(stmt->finallyBlock.get());
+        emit(OP_RESTORE_RETURN);
     }
 }
 
 }  // namespace vm
+
