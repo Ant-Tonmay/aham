@@ -16,6 +16,12 @@ struct LoopContext {
     std::vector<int> continueJumps;   // pending forward jumps for 'continue' (for loops)
 };
 
+// Tracks a finally block during compilation so that `return` inside try
+// can emit OP_SAVE_RETURN + OP_JUMP and register the jump for later patching.
+struct FinallyContext {
+    std::vector<int>* pendingJumps;   // Pointer to the jumpsToFinally vector owned by compileTryCatchStmt
+};
+
 class Compiler {
 public:
     FunctionObject* currentFunction;              // function being compiled right now
@@ -42,7 +48,11 @@ private:
     void endScope();
     void addLocal(const std::string& name);
     int resolveLocal(const std::string& name);
-    std::vector<Block*> activeFinallyBlocks;
+    
+    // Stack of active finally contexts for return-inside-try handling.
+    // When a return is compiled inside a try-with-finally, it emits
+    // OP_SAVE_RETURN + OP_JUMP and records the jump offset here.
+    std::vector<FinallyContext> activeFinallyContexts;
 
     void compileFunction(Function* func);
     void compileExpr(ASTNode*);

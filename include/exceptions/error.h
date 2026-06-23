@@ -20,3 +20,5 @@ public:
     RuntimeError(std::string msg, SourceLocation l)
         : message(msg), loc(l) {}
 };
+// Internal signal used by throwPenguinException to jump back to the dispatch loop
+struct PenguinThrow {};

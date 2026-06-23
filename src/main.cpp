@@ -73,12 +73,6 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         filename = argv[2];
-    } else {
-        if (argc != 2) {
-             std::cerr << "Usage: penguin <file.pg>\n";
-             return 1;
-        }
-        filename = argv[1];
     }
 
     if (mode == Mode::RUN_FROM_FILE) {
