@@ -42,9 +42,9 @@ namespace vm
         Chunk &c = ctor->chunk;
         int msgIdx = c.addConstant(std::string("message"));
         c.write(OP_GET_LOCAL);
-        c.write(1); // push msg arg
+        c.write(0); // push this / instance
         c.write(OP_GET_LOCAL);
-        c.write(0); // push this
+        c.write(1); // push message
         c.write(OP_SET_PROPERTY);
         c.write(msgIdx); // this.message = msg
         c.write(OP_POP);
