@@ -5,6 +5,7 @@
 #include "interpreter/runtime_value.h"
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include <unordered_map>
 
 StmtExecutor::StmtExecutor(Interpreter* interpreter) : interpreter(interpreter) {}
 
@@ -310,6 +311,15 @@ void StmtExecutor::visit(const ClassStmt* stmt ,Environment* env) {
         klass->parent = parent;
     }
 
+    std::unordered_map<std::string, AccessModifier> declaredModifiers;
+    for (auto& section : stmt->sections) {
+        for (auto& member : section->members) {
+            if (auto methodDecl = dynamic_cast<MethodDecl*>(member.get())) {
+                declaredModifiers[methodDecl->name] = section->modifier;
+            }
+        }
+    }
+
     for (auto& section : stmt->sections) {
 
         for (auto& member : section->members) {
@@ -320,7 +330,11 @@ void StmtExecutor::visit(const ClassStmt* stmt ,Environment* env) {
 
             else if (auto method = dynamic_cast<MethodDef*>(member.get())) {
                 klass->methods[method->name].push_back(method);
-                klass->methodAccess[method->name] = section->modifier;
+                AccessModifier am = section->modifier;
+                if (declaredModifiers.count(method->name)) {
+                    am = declaredModifiers[method->name];
+                }
+                klass->methodAccess[method->name] = am;
             }
         }
     }

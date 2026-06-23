@@ -317,6 +317,15 @@ void Compiler::compileStmt(ASTNode* node) {
             emit(OP_INHERIT);
         }
 
+        std::unordered_map<std::string, AccessModifier> declaredModifiers;
+        for (const auto& section : classStmt->sections) {
+            for (const auto& member : section->members) {
+                if (auto* methodDecl = dynamic_cast<MethodDecl*>(member.get())) {
+                    declaredModifiers[methodDecl->name] = section->modifier;
+                }
+            }
+        }
+
         for (const auto& section : classStmt->sections) {
             for (const auto& member : section->members) {
                 if (auto* field = dynamic_cast<FieldDecl*>(member.get())) {
@@ -393,7 +402,12 @@ void Compiler::compileStmt(ASTNode* node) {
                     int methodNameIdx = currentChunk().addConstant(method->name);
                     emit(OP_METHOD);
                     emit(methodNameIdx);
-                    emit(static_cast<uint8_t>(section->modifier));
+                    
+                    AccessModifier am = section->modifier;
+                    if (declaredModifiers.count(method->name)) {
+                        am = declaredModifiers[method->name];
+                    }
+                    emit(static_cast<uint8_t>(am));
                 }
             }
         }
