@@ -232,6 +232,15 @@ namespace vm
                 if (bit != builtinsModule->globals.end())
                 {
                     val = bit->second;
+                }else{ 
+                    // if val is nothing 
+                    // if it cause erros or unwanted behaviour gotta check this 
+                    // for now it worked , i am gonna commit
+                    throwPenguinException(
+                        "NameError",
+                        "Undefined variable '" + name + "'."
+                    );
+                    return true;
                 }
             }
             if (std::holds_alternative<ReferenceObject *>(val))
