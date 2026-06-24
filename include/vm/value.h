@@ -37,7 +37,8 @@ using Value = std::variant<
     InstanceObject*,
     BoundMethod*,
     ReferenceObject*,
-    std::string 
+    ModuleObject*,
+    std::string
 >;
 
 struct Chunk {

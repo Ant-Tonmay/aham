@@ -9,7 +9,7 @@
 #include "vm/vm.h"
 #include "vm/utils/serializer.h"
 #include "vm/utils/deserializer.h"
-#include "loader/module_loader.h"
+
 #include "exceptions/error.h"
 
 static void printInfo() {
@@ -120,8 +120,33 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        ModuleLoader loader;
-        auto program = loader.linkFromEntryFile(filename);
+        std::ifstream file(filename);
+
+        if (!file)
+        {
+            std::cerr
+                << "Could not open source file: "
+                << filename
+                << "\n";
+
+            return 1;
+        }
+
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+
+        std::string source =
+            buffer.str();
+
+        Lexer lexer(source);
+
+        auto tokens =
+            lexer.tokenize();
+
+        Parser parser(tokens);
+
+        auto program =
+            parser.parse();
 
         // 4. Interpret / Compile
         if (mode == Mode::COMPILE_TO_FILE) {

@@ -54,38 +54,81 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
             std::string name = std::get<std::string>(frame.function->chunk.constants[nameIdx]);
             Value objectValue = pop();
             
+            // Class shared fields
             if (std::holds_alternative<ClassObject*>(objectValue)) {
                 ClassObject* klass = std::get<ClassObject*>(objectValue);
                 if (klass->sharedFields.count(name)) {
                     push(klass->sharedFields[name]);
                     return true;
                 }
-                std::cerr << "Runtime error: Undefined shared property '" << name << "'." << std::endl;
-                return false;
+                throwPenguinException(
+                    "NameError",
+                    "Class '" +
+                    klass->name +
+                    "' has no shared property '" +
+                    name +
+                    "'."
+                );
+                return true;
             }
 
+            // Module exports
+
+            if (std::holds_alternative<ModuleObject*>(objectValue))
+            {
+                ModuleObject* module =
+                    std::get<ModuleObject*>(objectValue);
+
+                auto it =
+                    module->exports.find(name);
+
+                if (it == module->exports.end())
+                {
+                    throwPenguinException("NameError","Module '" + module->name + "' has no export '" + name + "'" );
+                    return true;
+                }
+
+                push(it->second);
+                return true;
+            }
+
+            // Invalid receiver
             if (!std::holds_alternative<InstanceObject*>(objectValue)) {
-                std::cerr << "Runtime error: OP_GET_PROPERTY expects an instance or class. Got: "
-                          << valueToString(objectValue) << std::endl;
-                return false;
+                throwPenguinException(
+                    "TypeError",
+                    "Cannot access property '" +
+                    name +
+                    "' on value '" +
+                    valueToString(objectValue) +
+                    "'."
+                );
+                return true;
             }
 
             InstanceObject* instance = std::get<InstanceObject*>(objectValue);
             ClassObject* contextClass = frame.function->isMethod ? frame.function->ownerClass : nullptr;
 
-            if (instance->klass->sharedFields.count(name)) {
-                push(instance->klass->sharedFields[name]);
+             // Shared field access through instance
+            auto sharedIt = instance->klass->sharedFields.find(name);
+            if (sharedIt != instance->klass->sharedFields.end())
+            {
+                push(sharedIt->second);
                 return true;
             }
-
+            // Normal field access
             if (instance->fields.count(name) || instance->klass->fields.count(name)) {
                 AccessModifier access = AccessModifier::PUBLIC;
                 if (instance->klass->fields.count(name)) {
                     access = instance->klass->fields[name];
                 }
                 if (!checkAccess(instance->klass, contextClass, access)) {
-                    std::cerr << "Runtime error: Access denied to field '" << name << "'." << std::endl;
-                    return false;
+                    throwPenguinException(
+                        "RuntimeException",
+                        "Access denied to field '" +
+                        name +
+                        "'."
+                    );
+                    return true;
                 }
                 if (instance->fields.count(name)) {
                     push(instance->fields[name]);
@@ -94,12 +137,17 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
                 }
                 return true;
             }
-
+            // Method access
             if (instance->klass->methods.count(name)) {
                 AccessModifier access = instance->klass->methodAccess[name];
                 if (!checkAccess(instance->klass, contextClass, access)) {
-                    std::cerr << "Runtime error: Access denied to method '" << name << "'." << std::endl;
-                    return false;
+                    throwPenguinException(
+                        "RuntimeException",
+                        "Access denied to method '" +
+                        name +
+                        "'."
+                    );
+                    return true;
                 }
 
                 std::vector<FunctionObject*> methods = instance->klass->methods[name];
@@ -108,8 +156,15 @@ bool VM::handleClassOp(CallFrame& frame, uint8_t instruction) {
                 return true;
             }
 
-            std::cerr << "Runtime error: Undefined property '" << name << "'." << std::endl;
-            return false;
+            
+            throwPenguinException(
+                "NameError",
+                "Undefined property '" +
+                name +
+                "'."
+            );
+
+            return true;
         }
 
         case OP_SET_PROPERTY: {

@@ -35,7 +35,7 @@ public:
         ModuleObject*
     > loadedModules;
 
-
+    VM();
     void push(Value v);
     Value pop();
 
@@ -57,7 +57,9 @@ private:
     void registerBuiltins();
     void throwPenguinException(const std::string& className, const std::string& message);
     // ClassObject* resolveExceptionClass(const std::string& className);
-
+    
+    ModuleObject* loadModule(const std::string& moduleName);
+    void executeModule(FunctionObject* script);
 };
 
 }

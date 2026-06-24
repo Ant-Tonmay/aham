@@ -80,6 +80,8 @@ namespace vm
         makeExceptionClass(*this, "TypeError", runtime);
         makeExceptionClass(*this, "DivisionByZeroException", runtime);
         makeExceptionClass(*this, "ValueError", exc);
+        makeExceptionClass(*this, "NameError", runtime);
+        makeExceptionClass(*this, "ImportError", runtime);
     }
 
 } // namespace vm
