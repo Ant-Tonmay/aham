@@ -136,6 +136,25 @@ FunctionObject* Compiler::compile(ASTNode* node) {
             compileStmt(alias.get());
         }
 
+        for (const auto& exportStmt : program->exports) {
+            for (const auto& name : exportStmt->members) {
+                int nameIdx = currentChunk().addConstant(name);
+                emit(OP_EXPORT);
+                emit(nameIdx);
+            }
+        }
+
+        for (const auto& inc : program->includes) {
+            int nameIdx = currentChunk().addConstant(inc->name);
+            emit(OP_INCLUDE);
+            emit(nameIdx);
+            emit(static_cast<uint8_t>(inc->members.size()));
+            for (const auto& member : inc->members) {
+                int memberIdx = currentChunk().addConstant(member);
+                emit(memberIdx);
+            }
+        }
+
         for (const auto& func : program->functions) {
             if (func->name == "main") {
                 beginScope();

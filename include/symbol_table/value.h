@@ -38,6 +38,7 @@ using Value = std::variant<
     InstanceObject*,
     BoundMethod*,
     EnvReference*,
+    ModuleObject*,
     std::string 
 >;
 
