@@ -81,6 +81,7 @@ private:
     int line_num = 1;
     int col_num = 1;
     size_t line_start = 0;
+    std::string current_line;  // text of the line currently being scanned
     
     bool isAtEnd() const;
     char advance();

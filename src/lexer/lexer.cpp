@@ -1,11 +1,9 @@
 #include "lexer/lexer.h"
-#include <iostream>
 #include <cctype>
 #include <vector>
 #include <string>
 #include <unordered_map>
-
-
+#include "exceptions/error.h"
 
 Token::Token(TokenType type, const std::string& lexeme, SourceLocation location)
     : type(type), lexeme(lexeme), location(location) {}
@@ -44,9 +42,11 @@ std::string Token::toString() const {
 }
 
 Lexer::Lexer(const std::string& src)
-    : source(src), current(0) {}
-
-
+    : source(src), current(0) {
+        size_t end = source.find('\n', 0);
+        if (end == std::string::npos) end = source.length();
+        current_line = source.substr(0, end);
+    }
 
 
 bool Lexer::isAtEnd() const {
@@ -59,6 +59,10 @@ char Lexer::advance() {
         line_num++;
         col_num = 1;
         line_start = current;
+        size_t end = source.find('\n', line_start);
+        if (end == std::string::npos) end = source.length();
+        current_line = source.substr(line_start, end - line_start);
+
     }
     return c;
 }
@@ -67,14 +71,10 @@ char Lexer::peek() const {
     return source[current];
 }
 void Lexer::addToken(TokenType type, const std::string& lexeme) {
-    size_t end_of_line = source.find('\n', line_start);
-    if (end_of_line == std::string::npos) end_of_line = source.length();
-    std::string current_line_str = source.substr(line_start, end_of_line - line_start);
-    
     int token_col = col_num - lexeme.length();
     if (token_col < 1) token_col = 1;
 
-    SourceLocation loc{current_line_str, line_num, token_col};
+    SourceLocation loc{current_line, line_num, token_col};
     tokens.emplace_back(type, lexeme, loc);
 }
 
@@ -104,7 +104,7 @@ void Lexer::_string() {
     }
 
     if (isAtEnd()) {
-        std::cerr << "Unterminated string." << std::endl;
+        throw CompileError("Unterminated string.", {current_line,line_num, col_num});
         return;
     }
 
@@ -115,14 +115,14 @@ void Lexer::_string() {
 
 void Lexer::_char(){
     if (isAtEnd()) {
-        std::cerr << "Unterminated char." << std::endl;
+        throw CompileError("Unterminated char.", {current_line,line_num, col_num});
         return;
     }
 
     char value = advance();
 
     if (peek() != '\'') {
-        std::cerr << "Char literal must contain exactly one character." << std::endl;
+        throw CompileError("Char literal must contain exactly one character.", {current_line,line_num, col_num});
         return;
     }
 
@@ -314,7 +314,7 @@ std::vector<Token> Lexer::tokenize() {
                 } else if (isalpha(c) || c == '_') {
                     identifier();
                 }  else {
-                    std::cerr << "Unexpected character: " << c << "\n";
+                    throw CompileError("Unexpected character: " + std::string(1, c), {current_line, line_num, col_num});
                 }
             }
         }

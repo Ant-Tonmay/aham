@@ -1,5 +1,6 @@
 #include "parser/parser.h"
 #include "exceptions/error.h"
+#include "lexer/lexer.h"
 
 template<typename T, typename... Args>
 std::unique_ptr<T> make_node(SourceLocation loc, Args&&... args) {
@@ -7,10 +8,6 @@ std::unique_ptr<T> make_node(SourceLocation loc, Args&&... args) {
     node->loc = loc;
     return node;
 }
-
-#include <iostream>
-#include <stdexcept>
-
 
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current(0) {}
 
@@ -813,7 +810,7 @@ Token Parser::previous() const {
 
 Token Parser::consume(TokenType type, const std::string& message) {
     if (check(type)) return advance();
-    throw CompileError(message + " Found: " + peek().lexeme, peek().location);
+    throw CompileError(message + " Found: " + peek().lexeme, previous().location);
 }
 std::vector<Param> Parser::parseParams(){
 
