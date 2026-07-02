@@ -139,13 +139,15 @@ namespace vm
         // Create an instance and set .message
         InstanceObject *inst = allocate<InstanceObject>(klass);
         inst->fields["message"] = message;
-
-        // Put the source location in a .location field as a string
+        
+        // Capture location NOW, before any handler dispatch changes the frame state.
+        SourceLocation loc{"", 0, 0};
+        
         auto &frame = frames.back();
         size_t idx = frame.ip > 0 ? frame.ip - 1 : 0;
         if (!frame.function->chunk.locations.empty() && idx < frame.function->chunk.locations.size())
         {
-            SourceLocation loc = frame.function->chunk.locations[idx];
+            loc = frame.function->chunk.locations[idx];
             inst->fields["source"] = loc.line;
             inst->fields["line"] = static_cast<int64_t>(loc.line_num);
             inst->fields["column"] = static_cast<int64_t>(loc.col_num);
@@ -167,7 +169,7 @@ namespace vm
         else
         {
             // Unhandled — format and throw to C++ top level
-            throw RuntimeError("[" + className + "] " + message, {});
+            throw RuntimeError("[" + className + "] " + message, loc);
         }
     }
 

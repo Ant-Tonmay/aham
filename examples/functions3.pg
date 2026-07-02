@@ -1,8 +1,0 @@
-{
-    func printHello(){
-        print("Hello");
-    }
-    func main(){
-        printHello();
-    }
-}

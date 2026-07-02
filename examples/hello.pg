@@ -1,5 +1,0 @@
-{
-  func main() {
-    print("Hello i am penguin , a brand new programming language");
-  }
-}

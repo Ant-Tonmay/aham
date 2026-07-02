@@ -1,8 +1,0 @@
-{
-    func main() {
-        print("Hello ");
-        println("World");
-        print("No newline");
-        println("!");
-    }
-}
