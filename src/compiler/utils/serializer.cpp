@@ -1,16 +1,16 @@
 #include "compiler/utils/serializer.h"
 #include <iostream>
+#include "exceptions/error.h"
 
 namespace vm {
 
 bool Serializer::serialize(const std::string& filename, const std::vector<FunctionObject*>& functions, FunctionObject* mainScript) {
     std::ofstream out(filename, std::ios::binary);
     if (!out) {
-        std::cerr << "Error: could not open file for writing: " << filename << "\n";
-        return false;
+        throw CompileError("Could not open file for writing: " + filename);
     }
 
-    out.write("PGC\x01", 4);
+    out.write("AHC\x01", 4);
 
     writePrimitive<uint32_t>(out, static_cast<uint32_t>(functions.size()));
     for (FunctionObject* func : functions) {
@@ -73,7 +73,7 @@ void Serializer::writeValue(std::ofstream& out, const Value& val) {
         writePrimitive<uint8_t>(out, static_cast<uint8_t>(ValueTag::FUNCTION));
         writeFunction(out, std::get<FunctionObject*>(val));
     } else {
-        std::cerr << "Warning: Serializing unsupported value type! Setting to null.\n";
+        std::cerr << "Warning: unsupported value type, serializing as null.\n";
         writePrimitive<uint8_t>(out, static_cast<uint8_t>(ValueTag::MONOSTATE));
     }
 }

@@ -109,7 +109,7 @@ namespace vm
 
         if (!exceptionHandlers.empty())
         {
-            throw RuntimeError(message, loc); // VM::run will catch it and jump
+            throw RuntimeError(message, loc);
         }
 
         throw RuntimeError(message, loc);
@@ -198,27 +198,7 @@ namespace vm
             {
                 continue;
             }
-            catch (const RuntimeError& e)
-            {
-                if (!exceptionHandlers.empty())
-                {
-                    auto handler = exceptionHandlers.back();
-                    exceptionHandlers.pop_back();
-
-                    while (frames.size() > handler.frameIndex + 1)
-                    {
-                        frames.pop_back();
-                    }
-
-                    stack.resize(handler.stackSize);
-                    push(e.message);
-
-                    frames.back().ip = handler.catchJumpOffset;
-                    continue;
-                }
-
-                throw;
-            }
+            
         }
     }
 
@@ -244,7 +224,7 @@ namespace vm
         ModuleResolver resolver;
 
 
-        std::string filename =resolver.resolve(importerFile,moduleName,".pgc");
+        std::string filename =resolver.resolve(importerFile,moduleName,".ahc");
         //std::cout << "Resolved file: " << filename << '\n';
         module->filePath = filename;
 

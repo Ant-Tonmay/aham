@@ -11,13 +11,39 @@
 #include "manifest/manifest_loader.h"
 
 static void printInfo() {
-    std::cout << "Hello i am Aham , A brand new programming language !!\n";
-    std::cout << "Version: 0.1.0\n";
+    std::cout << "Aham Programming Language\n";
+    std::cout << "Version: 0.1.0\n\n";
+
+    std::cout << "Usage:\n";
+    std::cout << "  aham [options] <file>\n\n";
+
+    std::cout << "Options:\n";
+    std::cout << "  -c <file>    Compile a source file (.aha) to bytecode (.ahc)\n";
+    std::cout << "  -r <file>    Execute a compiled bytecode file (.ahc)\n";
+    std::cout << "  --version    Display version information\n";
+    std::cout << "  -v           Display version information\n";
+    std::cout << "  --help       Display help message\n";
+    std::cout << "  -h           Display help message\n";
+    std::cout << "  build        Build the current project\n";
+    std::cout << "  run          Build (if needed) and run the current project\n";
 }
 
 static void printVersion() {
     std::cout << "Aham Programming Language\n";
     std::cout << "Version: 0.1.0\n";
+}
+
+static void print_help(){
+    std::cout << "Usage:\n";
+    std::cout << "  aham [options] <file>\n\n";
+
+    std::cout << "Options:\n";
+    std::cout << "  -c <file>    Compile a source file (.aha) to bytecode (.ahc)\n";
+    std::cout << "  -r <file>    Execute a compiled bytecode file (.ahc)\n";
+    std::cout << "  --version    Display version information\n";
+    std::cout << "  -v           Display version information\n";
+    std::cout << "  build        Build the current project\n";
+    std::cout << "  run          run the current project\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -38,7 +64,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (arg1 == "--help" || arg1 == "-h") {
-        printInfo();
+        print_help();
         return 0;
     }
 
@@ -60,14 +86,15 @@ int main(int argc, char* argv[]) {
     if (arg1 == "-r") {
         mode = Mode::RUN_FROM_FILE;
         if (argc != 3) {
-            std::cerr << "Usage: aham -r <file.pgc>\n";
+            std::cerr << "Usage: aham -r <file.ahc>\n";
+            printError("Argument Error", "Usage: aham -r <file.ahc>", 0, 0, "");
             return 1;
         }
         filename = argv[2];
     } else if (arg1 == "-c") {
         mode = Mode::COMPILE_TO_FILE;
         if (argc != 3) {
-            std::cerr << "Usage: aham -c <file.pg>\n";
+            printError("Argument Error", "Usage: aham -c <file.aha>", 0, 0, "");
             return 1;
         }
         filename = argv[2];
@@ -86,7 +113,13 @@ int main(int argc, char* argv[]) {
             filename = argv[2];
     }
 
+    // these are used to report errors 
     if (mode == Mode::RUN_FROM_FILE) {
+        if (!hasExtension(filename, ".ahc")) {
+            printError("FileTypeError", "file must have .ahc extension", 0, 0, "");
+            return 1;
+        }
+        
         std::vector<vm::FunctionObject*> compiledFunctions;
         vm::FunctionObject* script = nullptr;
 
@@ -121,15 +154,19 @@ int main(int argc, char* argv[]) {
         try {
             vmInstance.run(script, compiledFunctions);
         } catch (const RuntimeError& e) {
-            std::cerr << "RuntimeError at line " << e.loc.line_num << ", col " << e.loc.col_num << ": " << e.message << "\n";
-            std::cerr << " | " << e.loc.line << "\n";
+    
+            printError("RuntimeError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
             return 1;
         } catch (const std::exception& e) {
-            std::cerr << "Runtime error: " << e.what() << "\n";
+            printError("RuntimeError", e.what(), 0, 0,"");
             return 1;
         }
         return 0;
     }else if (mode == Mode::COMPILE_TO_FILE) {
+        if (!hasExtension(filename, ".aha")) {
+            printError("FileTypeError", "file must have .aha extension", 0, 0, "");
+            return 1;
+        }
         DependencyGraph graph;
         try{
             graph.build(filename);
@@ -141,22 +178,20 @@ int main(int argc, char* argv[]) {
 
                 auto* script = compiler.compile(program.get());
                 vm::Serializer::serialize(
-                    changeExtension(file, ".pgc"),
+                    changeExtension(file, ".ahc"),
                     compiler.compiledFunctions,
                     script
                 );
             }
         }
         catch (const CompileError& e) {
-            std::cerr << "Compile time error at line " << e.loc.line_num << ", col " << e.loc.col_num << ": " << e.message << "\n";
-            std::cerr << " | " << e.loc.line << "\n";
+            printError("CompileError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
             return 1;
         } catch (const RuntimeError& e) {
-            std::cerr << "Runtime error at line " << e.loc.line_num << ", col " << e.loc.col_num << ": " << e.message << "\n";
-            std::cerr << " | " << e.loc.line << "\n";
+            printError("RuntimeError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
             return 1;
         } catch (const std::exception& e) {
-            std::cerr << "Runtime error: " << e.what() << "\n";
+            printError("RuntimeError", e.what(), 0, 0, "");
             return 1;
         }
     }else if(mode == Mode::BUILD_PROJECT){
@@ -170,8 +205,7 @@ int main(int argc, char* argv[]) {
             // std::cout << "Library: " << manifest.libraryDir << '\n';
             // std::cout << "Build: " << manifest.buildDir << '\n';
             // std::cout << "Entry: " << manifest.entry << '\n';
-            for (const auto& file : buildOrder)
-            {
+            for (const auto& file : buildOrder){   
                 auto program = parseFile(file);
                 auto output = getBuildOutputPath(file, manifest);
                 vm::Compiler compiler;
@@ -186,56 +220,67 @@ int main(int argc, char* argv[]) {
             }
         }
         catch (const CompileError& e) {
-            std::cerr << "Compile time error at line " << e.loc.line_num << ", col " << e.loc.col_num << ": " << e.message << "\n";
-            std::cerr << " | " << e.loc.line << "\n";
+            printError("CompileError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
             return 1;
         } catch (const RuntimeError& e) {
-            std::cerr << "Runtime error at line " << e.loc.line_num << ", col " << e.loc.col_num << ": " << e.message << "\n";
-            std::cerr << " | " << e.loc.line << "\n";
+            printError("RuntimeError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
             return 1;
         } catch (const std::exception& e) {
-            std::cerr << "Runtime error: " << e.what() << "\n";
+            printError("RuntimeError", e.what(), 0, 0, "");
             return 1;
         }
     }else if(mode == Mode::RUN_PROJECT){
-        ManifestLoader loader;
-        Manifest manifest = loader.load(std::filesystem::current_path());
-
-        auto bytecode = getBuildOutputPath(manifest.entry.string(),manifest);
-        std::vector<vm::FunctionObject*> compiledFunctions;
-        vm::FunctionObject* script = nullptr;
-
-        if (!vm::Deserializer::deserialize(
-                bytecode.string(),
-                compiledFunctions,
-                script))
-        {
+        try {
+                ManifestLoader loader;
+                Manifest manifest = loader.load(std::filesystem::current_path());
+        
+                auto bytecode = getBuildOutputPath(manifest.entry.string(),manifest);
+                std::vector<vm::FunctionObject*> compiledFunctions;
+                vm::FunctionObject* script = nullptr;
+        
+                if (!vm::Deserializer::deserialize(
+                        bytecode.string(),
+                        compiledFunctions,
+                        script))
+                {
+                    return 1;
+                }
+        
+                vm::VM vmInstance;
+        
+                auto* mainModule = vmInstance.allocate<vm::ModuleObject>();
+                mainModule->name = "main";
+                mainModule->filePath = bytecode.string();
+        
+                script->module = mainModule;
+        
+                for (auto* fn : compiledFunctions)
+                {
+                    fn->module = mainModule;
+        
+                    if (!fn->isMethod)
+                    {
+                        mainModule->globals[fn->name] = fn;
+                    }
+                }
+        
+                vmInstance.run(script, compiledFunctions);
+            
+        }catch(const CompileError& e){
+            printError("CompileError", e.message,e.loc.line_num, e.loc.col_num, e.loc.line);;
+            return 1;
+        }catch(const RuntimeError& e){
+            printError("RuntimeError", e.message, e.loc.line_num, e.loc.col_num, e.loc.line);
+            return 1;
+        }catch(std::exception& e){
+            printError("RuntimeError", e.what(), 0, 0, "");
             return 1;
         }
-
-        vm::VM vmInstance;
-
-        auto* mainModule = vmInstance.allocate<vm::ModuleObject>();
-        mainModule->name = "main";
-        mainModule->filePath = bytecode.string();
-
-        script->module = mainModule;
-
-        for (auto* fn : compiledFunctions)
-        {
-            fn->module = mainModule;
-
-            if (!fn->isMethod)
-            {
-                mainModule->globals[fn->name] = fn;
-            }
-        }
-
-        vmInstance.run(script, compiledFunctions);
+        
     }
     
     else{
-         std::cerr << "No specific options found . Use -r to run and -c to compile\n";
+         printError("Unknown", "No specific options found . Use -r to run and -c to compile", 0, 0, "");
     }
 
     return 0;

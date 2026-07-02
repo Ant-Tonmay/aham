@@ -7,6 +7,7 @@
 
 #include "lexer/lexer.h"
 #include "parser/parser.h"
+#include "exceptions/error.h"
 
 ModuleNode DependencyScanner::scan(
     const std::string &filePath)
@@ -22,14 +23,14 @@ ModuleNode DependencyScanner::scan(
 
     node.outputFile =
         std::filesystem::path(filePath)
-            .replace_extension(".pgc")
+            .replace_extension(".ahc")
             .string();
 
     std::ifstream file(filePath);
 
     if (!file)
     {
-        throw std::runtime_error(
+        throw RuntimeError(
             "Could not open source file: " +
             filePath);
     }

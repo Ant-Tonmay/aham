@@ -1,6 +1,7 @@
 #include "dependency_graph/dependency_graph.h"
 #include "dependency_graph/dependency_scanner.h"
-#include "vm/vm.h"
+#include <iostream>
+
 
 DependencyGraph::DependencyGraph(){
     scanner = new DependencyScanner();
@@ -34,7 +35,7 @@ void DependencyGraph::dfs(
         //std::cout << "  import: " << import << "\n";
 
         //std::cout<< "Resolving " << import << " from " << filePath << "\n";
-        std::string importPath = module_resolver->resolve(filePath,import,".pg");
+        std::string importPath = module_resolver->resolve(filePath,import,".aha");
         
         resolvedImports.push_back(importPath);
         dfs(importPath, state);

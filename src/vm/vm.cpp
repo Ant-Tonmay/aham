@@ -1,7 +1,9 @@
 #include "vm/vm.h"
 
+#include "lexer/lexer.h"
 #include "vm/utils/value_utils.h"
 #include <iostream>
+#include "exceptions/error.h"
 namespace vm
 {
     VM::VM()
@@ -327,9 +329,6 @@ namespace vm
             else if (std::holds_alternative<std::string>(exc) && typeName == "String")
             {
                 matches = true;
-                auto& globals =
-                    frame.function->module->globals;
-                
             }
             else if (std::holds_alternative<int64_t>(exc) && typeName == "Int")
             {
@@ -684,8 +683,8 @@ namespace vm
             return false;
 
         default:
-            std::cerr << "Runtime error: unknown opcode " << static_cast<int>(instruction) << std::endl;
-            return false;
+            SourceLocation loc = frame.function->chunk.locations[frame.ip - 1];
+            throw RuntimeError("Unknown opcode", loc);
         }
     }
 

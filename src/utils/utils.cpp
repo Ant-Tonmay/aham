@@ -63,7 +63,7 @@ std::filesystem::path getBuildOutputPath(const std::string& file, const Manifest
 
     if (!ec && !relative.empty() && *relative.begin() != "..")
     {
-        relative.replace_extension(".pgc");
+        relative.replace_extension(".ahc");
         return manifest.buildDir / relative;
     }
 
@@ -73,7 +73,7 @@ std::filesystem::path getBuildOutputPath(const std::string& file, const Manifest
 
     if (!ec && !relative.empty() && *relative.begin() != "..")
     {
-        relative.replace_extension(".pgc");
+        relative.replace_extension(".ahc");
         return manifest.buildDir / relative;
     }
 
@@ -81,3 +81,23 @@ std::filesystem::path getBuildOutputPath(const std::string& file, const Manifest
         "File '" + sourceFile.string() +
         "' is outside the project.");
 }
+
+
+void printError(std::string phase, std::string msg , int line_num , int col_num , std::string line){
+
+    if(line_num == 0 || col_num == 0){
+        std::cerr << phase << ": " << msg << "\n";
+        return;
+    }
+    
+    std::cerr << phase << ": error at line " << line_num << ":" << col_num << ": " << msg << "\n";
+    if (!line.empty()) {
+        std::cerr << " | " << line << "\n";
+        if (col_num > 0) std::cerr << " | " << std::string(col_num - 1, ' ') << "^\n";
+    }
+}
+
+bool hasExtension(const std::string& filePath, const std::string& extension){
+    return std::filesystem::path(filePath).extension() == extension;
+}
+

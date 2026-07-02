@@ -1,21 +1,20 @@
 #include "compiler/utils/deserializer.h"
 #include "compiler/utils/serializer.h" // For ValueTag enum
 #include <iostream>
+#include "exceptions/error.h"
 
 namespace vm {
 
 bool Deserializer::deserialize(const std::string& filename, std::vector<FunctionObject*>& outFunctions, FunctionObject*& outMainScript) {
     std::ifstream in(filename, std::ios::binary);
     if (!in) {
-        std::cerr << "Error: could not open file for reading: " << filename << "\n";
-        return false;
+        throw RuntimeError("Could not open file for reading: " + filename);
     }
 
     char magic[4];
     in.read(magic, 4);
-    if (in.gcount() != 4 || magic[0] != 'P' || magic[1] != 'G' || magic[2] != 'C' || magic[3] != '\x01') {
-        std::cerr << "Error: invalid or incompatible .pgc file\n";
-        return false;
+    if (in.gcount() != 4 || magic[0] != 'A' || magic[1] != 'H' || magic[2] != 'C' || magic[3] != '\x01') {
+        throw RuntimeError("Invalid or incompatible .ahc file");
     }
 
     uint32_t numFunctions = readPrimitive<uint32_t>(in);
@@ -86,8 +85,8 @@ Value Deserializer::readValue(std::ifstream& in, std::vector<FunctionObject*>& o
             return fn;
         }
         default:
-            std::cerr << "Error: unknown value tag in bytecode\n";
-            return std::monostate{};
+            throw RuntimeError("Unknown value tag in bytecode");
+            
     }
 }
 

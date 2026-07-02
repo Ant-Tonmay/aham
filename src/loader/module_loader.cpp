@@ -1,5 +1,5 @@
 #include "loader/module_loader.h"
-
+#include "exceptions/error.h"
 
 std::string ModuleResolver::resolve(
     const std::string& currentFile,
@@ -18,14 +18,14 @@ std::string ModuleResolver::resolve(
         const Manifest& manifest = loader.load(currentFile);
         std::vector<fs::path> candidates ;
         //while building
-        if (extension == ".pg")
+        if (extension == ".aha")
         {
             candidates = {
                 manifest.sourceDir / (path + extension),
                 manifest.libraryDir / (path + extension)
             };
         }
-        else if (extension == ".pgc")
+        else if (extension == ".ahc")
         {   // while running
             candidates = {
                 manifest.buildDir / (path + extension)
@@ -67,7 +67,7 @@ std::string ModuleResolver::resolve(
         }
     }
 
-    throw std::runtime_error(
+    throw RuntimeError(
         "Cannot find module '" +
         moduleName + "'"
     );
