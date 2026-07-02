@@ -19,6 +19,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # -----------------------------
 add_library(aham_core
     src/lexer/lexer.cpp
+    src/lexer/utils/lexer_helpers.cpp
     src/parser/parser.cpp
     src/interpreter/interpreter.cpp
     src/interpreter/environment.cpp
