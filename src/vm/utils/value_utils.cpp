@@ -12,7 +12,9 @@ std::string typeOf(const Value& value) {
         else if constexpr (std::is_same_v<T, bool>) return "bool";
         else if constexpr (std::is_same_v<T, char>) return "char";
         else if constexpr (std::is_same_v<T, double>) return "float";
-        else if constexpr (std::is_same_v<T, __int128>) return "int128";
+        #ifndef _MSC_VER
+            else if constexpr (std::is_same_v<T, __int128>) return "int128";
+        #endif
         else if constexpr (std::is_same_v<T, std::string>) return "string";
         else if constexpr (std::is_same_v<T, ArrayObject*>) return "array";
         else if constexpr (std::is_same_v<T, FunctionObject*>) return "function";

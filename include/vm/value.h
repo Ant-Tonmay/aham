@@ -10,6 +10,7 @@
 #include "opcode.h"
 #include "../parser/ast.h"
 
+
 namespace vm {
 
 enum class ObjType {
@@ -41,8 +42,29 @@ struct ReferenceObject;
 struct ModuleObject;
 
 
+#ifdef _MSC_VER
+
 using Value = std::variant<
-    int64_t,      
+    int64_t,
+    bool,
+    char,
+    double,
+    ArrayObject*,
+    std::monostate,
+    FunctionObject*,
+    ObjectObject*,
+    ClassObject*,
+    InstanceObject*,
+    BoundMethod*,
+    ReferenceObject*,
+    ModuleObject*,
+    std::string
+>;
+
+#else
+
+using Value = std::variant<
+    int64_t,
     bool,
     char,
     double,
@@ -58,6 +80,8 @@ using Value = std::variant<
     ModuleObject*,
     std::string
 >;
+
+#endif
 
 struct Chunk {
     std::vector<uint8_t> code;

@@ -75,8 +75,13 @@ Value Deserializer::readValue(std::ifstream& in, std::vector<FunctionObject*>& o
             return readPrimitive<char>(in);
         case ValueTag::DOUBLE:
             return readPrimitive<double>(in);
+    #ifndef _MSC_VER
         case ValueTag::INT128:
             return readPrimitive<__int128>(in);
+    #else
+        case ValueTag::INT128:
+             throw RuntimeError("int128 is not supported on this platform");
+    #endif
         case ValueTag::STRING:
             return readString(in);
         case ValueTag::FUNCTION: {

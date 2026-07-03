@@ -63,9 +63,11 @@ void Serializer::writeValue(std::ofstream& out, const Value& val) {
     } else if (std::holds_alternative<double>(val)) {
         writePrimitive<uint8_t>(out, static_cast<uint8_t>(ValueTag::DOUBLE));
         writePrimitive<double>(out, std::get<double>(val));
+    #ifndef _MSC_VER
     } else if (std::holds_alternative<__int128>(val)) {
         writePrimitive<uint8_t>(out, static_cast<uint8_t>(ValueTag::INT128));
         writePrimitive<__int128>(out, std::get<__int128>(val));
+    #endif
     } else if (std::holds_alternative<std::string>(val)) {
         writePrimitive<uint8_t>(out, static_cast<uint8_t>(ValueTag::STRING));
         writeString(out, std::get<std::string>(val));
