@@ -10,8 +10,15 @@ std::string ModuleResolver::resolve(
     namespace fs = std::filesystem;
 
      std::string path = moduleName;
+
+     #ifdef _WIN32
+     constexpr char kSeparator = '\\';
+     #else
+     constexpr char kSeparator = '/';
+     #endif
+
         
-    std::replace(path.begin(),path.end(),'.',fs::path::preferred_separator);
+    std::replace(path.begin(),path.end(),'.',kSeparator);
 
     // if Manifest file exists look for manifest file 
     if(loader.exists(currentFile)){
