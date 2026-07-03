@@ -3,8 +3,7 @@
 #include <memory>
 #include <string>
 #include "manifest/manifest.h"
-
-class Program;
+#include "parser/ast.h"
 
 std::unique_ptr<Program> parseFile(
     const std::string& filePath);

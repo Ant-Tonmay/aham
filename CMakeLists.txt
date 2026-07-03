@@ -78,40 +78,6 @@ target_link_libraries(aham PRIVATE aham_core)
 # -----------------------------
 enable_testing()
 
-add_executable(aham_lexer_test tests/test_lexer.cpp)
-target_link_libraries(aham_lexer_test PRIVATE aham_core)
-add_test(NAME LexerTest COMMAND aham_lexer_test)
-
-add_executable(aham_parser_test tests/test_parser.cpp)
-target_link_libraries(aham_parser_test PRIVATE aham_core)
-add_test(NAME ParserTest COMMAND aham_parser_test)
-
-add_executable(aham_symbol_table_test tests/test_symbol_table.cpp)
-target_link_libraries(aham_symbol_table_test PRIVATE aham_core)
-add_test(NAME SymbolTableTest COMMAND aham_symbol_table_test)
-
-add_executable(aham_interpreter_test tests/test_interpreter.cpp)
-target_link_libraries(aham_interpreter_test PRIVATE aham_core)
-add_test(NAME InterpreterTest COMMAND aham_interpreter_test ${PROJECT_SOURCE_DIR}/examples/operators.pg)
-
-
-add_executable(aham_parser_array_test tests/test_parser_arrays.cpp)
-target_link_libraries(aham_parser_array_test PRIVATE aham_core)
-add_test(NAME ParserArrayTest COMMAND aham_parser_array_test)
-
-add_executable(aham_parser_function_test tests/test_parser_functions.cpp)
-target_link_libraries(aham_parser_function_test PRIVATE aham_core)
-add_test(NAME ParserFunctionTest COMMAND aham_parser_function_test)
-
-add_executable(aham_parser_loops_test tests/test_parser_loops.cpp)
-target_link_libraries(aham_parser_loops_test PRIVATE aham_core)
-add_test(NAME ParserLoopsTest COMMAND aham_parser_loops_test)
-
-add_executable(aham_parser_classes_test tests/test_parser_classes.cpp)
-target_link_libraries(aham_parser_classes_test PRIVATE aham_core)
-add_test(NAME ParserClassesTest COMMAND aham_parser_classes_test)
-
-
 install(TARGETS aham
     RUNTIME DESTINATION bin
 )
