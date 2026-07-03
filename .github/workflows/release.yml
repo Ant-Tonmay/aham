@@ -39,6 +39,10 @@ jobs:
       - name: Build
         run: cmake --build build --config Release
 
+      - name: Install NSIS
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
       - name: Package
         working-directory: build
         run: cpack -G "${{ matrix.generator }}"
