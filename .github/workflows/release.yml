@@ -7,6 +7,11 @@ on:
       - master
     tags:
       - "v*"
+    paths:
+      - "src/**"
+      - "include/**"
+      - "CMakeLists.txt"
+      - ".github/workflows/**"
 
 permissions:
   contents: write
