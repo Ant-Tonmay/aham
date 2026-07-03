@@ -1,1 +1,16 @@
 build/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+CPackConfig.cmake
+CPackSourceConfig.cmake
+CTestTestfile.cmake
+Testing/
+install_manifest.txt
+*.tar.gz
+*.deb
+*.rpm
+*.zip
+*.exe
+*.dmg

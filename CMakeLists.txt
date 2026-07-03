@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
     aham
-    VERSION 0.1.0
+    VERSION 1.0.0
     DESCRIPTION "Aham Programming Language"
     LANGUAGES CXX
 )
@@ -110,6 +110,31 @@ add_test(NAME ParserLoopsTest COMMAND aham_parser_loops_test)
 add_executable(aham_parser_classes_test tests/test_parser_classes.cpp)
 target_link_libraries(aham_parser_classes_test PRIVATE aham_core)
 add_test(NAME ParserClassesTest COMMAND aham_parser_classes_test)
+
+
+install(TARGETS aham
+    RUNTIME DESTINATION bin
+)
+
+
+set(CPACK_PACKAGE_NAME "Aham")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VENDOR "Aham Project")
+set(CPACK_PACKAGE_CONTACT "team.aham@zohomail.in")
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Aham Programming Language")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Ant-Tonmay/aham")
+
+# Debian
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Tonmay")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_DEBIAN_PACKAGE_SECTION "devel")
+set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "Aham")
+set(CPACK_STRIP_FILES TRUE)
+
+include(CPack)
 
 # -----------------------------
 # Debug flags
