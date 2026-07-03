@@ -22,7 +22,7 @@ std::filesystem::path ManifestLoader::findProjectRoot(
 
     while (true)
     {
-        if (fs::exists(current / "krill.toml"))
+        if (fs::exists(current / "aham.toml"))
         {
             return fs::canonical(current);
         }
@@ -30,7 +30,7 @@ std::filesystem::path ManifestLoader::findProjectRoot(
         if (current == current.parent_path())
         {
             throw std::runtime_error(
-                "Cannot find krill.toml starting from '" +
+                "Cannot find aham.toml starting from '" +
                 path.string() + "'"
             );
         }
@@ -51,7 +51,7 @@ const Manifest& ManifestLoader::load(
     }
 
     std::filesystem::path manifestFile =
-        projectRoot / "krill.toml";
+        projectRoot / "aham.toml";
 
     Manifest manifest =
         parser.parse(manifestFile);
@@ -87,7 +87,7 @@ bool ManifestLoader::exists(
 
     while (true)
     {
-        if (fs::exists(current / "krill.toml"))
+        if (fs::exists(current / "aham.toml"))
         {
             return true;
         }
