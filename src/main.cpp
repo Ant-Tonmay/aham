@@ -12,7 +12,7 @@
 
 static void printInfo() {
     std::cout << "Aham Programming Language\n";
-    std::cout << "Version: 0.1.0\n\n";
+    std::cout << "Version: 1.0.0\n\n";
 
     std::cout << "Usage:\n";
     std::cout << "  aham [options] <file>\n\n";
@@ -30,7 +30,7 @@ static void printInfo() {
 
 static void printVersion() {
     std::cout << "Aham Programming Language\n";
-    std::cout << "Version: 0.1.0\n";
+    std::cout << "Version: 1.0.0\n";
 }
 
 static void print_help(){
